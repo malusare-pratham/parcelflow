@@ -26,15 +26,15 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-brand-500/5 to-transparent pointer-events-none" />
-        <div className="max-w-5xl mx-auto px-4 pt-16 pb-20 text-center">
-          <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-4 py-1.5 mb-6">
+        <div className="max-w-5xl mx-auto px-4 pt-8 sm:pt-16 pb-20 text-center">
+          <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 rounded-full px-4 py-1.5 mb-3 sm:mb-6">
             <span className="w-2 h-2 bg-brand-500 rounded-full animate-pulse-slow" />
             <span className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Same-Day Delivery Marketplace</span>
           </div>
 
-          <h1 className="font-display text-5xl sm:text-6xl font-bold text-white leading-tight mb-4">
-            Ship Parcels with<br />
-            <span className="text-brand-400">Scheduled Trips</span>
+          <h1 className="font-display text-4xl sm:text-6xl font-bold text-white leading-[1.05] tracking-tight mb-4">
+            <span className="block whitespace-nowrap">Ship Parcels with</span>
+            <span className="block text-brand-400">Scheduled Trips</span>
           </h1>
           <p className="text-slate-400 text-lg max-w-xl mx-auto mb-12">
             Connect with verified drivers going your route. Fast, reliable, and affordable same-day parcel delivery.

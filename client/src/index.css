@@ -18,6 +18,15 @@
     background-attachment: fixed;
   }
 
+  input[type="date"] {
+    color-scheme: dark;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.75;
+  }
+
   ::-webkit-scrollbar {
     width: 5px;
   }

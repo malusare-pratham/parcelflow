@@ -55,10 +55,10 @@ export default function TripsPanel() {
         <p className="page-subtitle">Review and approve driver trip submissions</p>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {tabs.map(tab => (
           <button key={tab} onClick={() => setFilter(tab)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-colors
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize whitespace-nowrap flex-shrink-0 transition-colors
               ${filter === tab ? 'bg-brand-500/20 text-brand-400 border border-brand-500/30' : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'}`}>
             {tab} ({trips.filter(t => tab === 'all' ? true : t.status === tab).length || (loading ? '...' : 0)})
           </button>

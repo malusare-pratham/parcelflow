@@ -24,6 +24,7 @@ export default function TripDetailPage() {
 
   const date = new Date(trip.date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   const slotsPercent = Math.round(((trip.capacity - trip.availableSlots) / trip.capacity) * 100)
+  const driverPhone = trip?.driverId?.phone ? String(trip.driverId.phone).replace(/[^\d+]/g, '') : null
 
   return (
     <div className="min-h-screen">
@@ -34,29 +35,31 @@ export default function TripDetailPage() {
           Back to trips
         </Link>
 
-        <div className="card p-6 mb-4 animate-slide-up">
+          <div className="card p-6 mb-4 animate-slide-up">
           {/* Route header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="text-center">
-                <p className="font-display text-xl font-bold text-white">{trip.from}</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+            <div className="flex items-center justify-center gap-3 min-w-0">
+              <div className="text-center w-28 sm:w-auto min-w-0">
+                <p className="font-display text-lg sm:text-xl font-bold text-white truncate">{trip.from}</p>
                 <p className="text-xs text-slate-500">Origin City</p>
                 {trip.pickupLocation && <p className="text-xs text-slate-400 mt-1">Pickup: {trip.pickupLocation}</p>}
               </div>
               <div className="flex items-center gap-1 text-brand-500">
-                <div className="w-16 h-px bg-brand-500/50" />
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <div className="w-10 sm:w-16 h-px bg-brand-500/50" />
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-                <div className="w-16 h-px bg-brand-500/50" />
+                <div className="w-10 sm:w-16 h-px bg-brand-500/50" />
               </div>
-              <div className="text-center">
-                <p className="font-display text-xl font-bold text-white">{trip.to}</p>
+              <div className="text-center w-28 sm:w-auto min-w-0">
+                <p className="font-display text-lg sm:text-xl font-bold text-white truncate">{trip.to}</p>
                 <p className="text-xs text-slate-500">Destination City</p>
                 {trip.dropLocation && <p className="text-xs text-slate-400 mt-1">Drop: {trip.dropLocation}</p>}
               </div>
             </div>
-            <StatusBadge status={trip.status} />
+            <div className="flex justify-end flex-shrink-0">
+              <StatusBadge status={trip.status} />
+            </div>
           </div>
 
           {/* Details grid */}
@@ -97,14 +100,33 @@ export default function TripDetailPage() {
           {trip.driverId && (
             <div className="border-t border-slate-800 pt-5 mb-5">
               <p className="label mb-3">Driver Information</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand-500/10 border border-brand-500/20 rounded-xl flex items-center justify-center">
-                  <span className="font-bold text-brand-400 text-sm">{trip.driverId.name?.[0]}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-brand-500/10 border border-brand-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <span className="font-bold text-brand-400 text-sm">{trip.driverId.name?.[0]}</span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">{trip.driverId.name}</p>
+                    <p className="text-xs text-slate-400">{trip.driverId.phone}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">{trip.driverId.name}</p>
-                  <p className="text-xs text-slate-400">{trip.driverId.phone}</p>
-                </div>
+
+                {driverPhone && (
+                  <a
+                    href={`tel:${driverPhone}`}
+                    className="btn-secondary text-xs py-2 px-3 inline-flex items-center justify-center gap-2 flex-shrink-0"
+                    aria-label={`Call ${trip.driverId.name}`}
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106a1.125 1.125 0 00-1.173.417l-.97 1.293a1.125 1.125 0 01-1.21.38 12.035 12.035 0 01-7.143-7.143 1.125 1.125 0 01.38-1.21l1.293-.97c.361-.271.52-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.09-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"
+                      />
+                    </svg>
+                    Contact
+                  </a>
+                )}
               </div>
 
               {trip.driverVehicle && (

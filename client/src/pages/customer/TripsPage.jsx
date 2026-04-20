@@ -51,7 +51,10 @@ export default function TripsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input className="input" placeholder="Origin city" value={from} onChange={e => setFrom(e.target.value)} />
             <input className="input" placeholder="Destination city" value={to} onChange={e => setTo(e.target.value)} />
-            <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+            <div>
+              <label className="label sm:hidden">Date</label>
+              <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+            </div>
             <button type="submit" className="btn-primary">Search</button>
           </div>
         </form>
