@@ -14,7 +14,7 @@
   body {
     @apply bg-slate-950 text-slate-100 font-sans antialiased;
     background-image: 
-      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249,115,22,0.08) 0%, transparent 60%);
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(59,130,246,0.10) 0%, transparent 60%);
     background-attachment: fixed;
   }
 

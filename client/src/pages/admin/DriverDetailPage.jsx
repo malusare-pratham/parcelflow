@@ -14,15 +14,16 @@ const DocPreview = ({ label, filename }) => {
       <p className="text-xs text-slate-600 mt-1">Not uploaded</p>
     </div>
   )
-  const isImage = /\.(jpg|jpeg|png|webp)$/i.test(filename)
+  const url = /^https?:\/\//i.test(filename) ? filename : `${UPLOADS_URL}/${filename}`
+  const isImage = /\.(jpg|jpeg|png|webp)(\?|$)/i.test(url)
   return (
     <div className="border border-slate-700 rounded-xl overflow-hidden">
       {isImage ? (
-        <a href={`${UPLOADS_URL}/${filename}`} target="_blank" rel="noreferrer">
-          <img src={`${UPLOADS_URL}/${filename}`} alt={label} className="w-full h-32 object-cover hover:opacity-90 transition-opacity" />
+        <a href={url} target="_blank" rel="noreferrer">
+          <img src={url} alt={label} className="w-full h-32 object-cover hover:opacity-90 transition-opacity" />
         </a>
       ) : (
-        <a href={`${UPLOADS_URL}/${filename}`} target="_blank" rel="noreferrer"
+        <a href={url} target="_blank" rel="noreferrer"
           className="flex items-center justify-center h-24 bg-slate-800 hover:bg-slate-700 transition-colors">
           <div className="text-center">
             <span className="text-3xl">📄</span>

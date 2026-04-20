@@ -1,5 +1,14 @@
 const Trip = require('../models/Trip');
 const Booking = require('../models/Booking');
+const DriverProfile = require('../models/DriverProfile');
+
+const VEHICLE_TYPE_INFO = {
+  bike: 'Best for small parcels (lightweight).',
+  auto: 'Good for small–medium parcels.',
+  car: 'Good for medium parcels; safer handling vs two-wheelers.',
+  van: 'Suitable for medium–heavy parcels; higher capacity.',
+  truck: 'Best for heavy/bulky parcels; highest capacity.',
+};
 
 // @desc    Search/get available trips
 // @route   GET /api/trips
@@ -41,7 +50,22 @@ const getTripById = async (req, res) => {
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found.' });
     }
-    res.json({ success: true, trip });
+    const profile = await DriverProfile.findOne({ userId: trip.driverId?._id }).lean();
+    const vehicleType = profile?.vehicleType || 'bike';
+
+    res.json({
+      success: true,
+      trip,
+      driverVehicle: profile
+        ? {
+            vehicleType,
+            vehicleTypeDescription: VEHICLE_TYPE_INFO[vehicleType] || '',
+            vehicleNumber: profile.vehicleNumber || null,
+            vehicleName: profile.vehicleName || null,
+            vehicleColor: profile.vehicleColor || null,
+          }
+        : null,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -58,6 +82,11 @@ const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Trip ID and parcel details are required.' });
     }
 
+    const weight = Number(parcelDetails.weight);
+    if (!Number.isFinite(weight) || weight <= 0) {
+      return res.status(400).json({ success: false, message: 'Parcel weight must be a valid number.' });
+    }
+
     const trip = await Trip.findById(tripId);
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found.' });
@@ -68,10 +97,10 @@ const createBooking = async (req, res) => {
     }
 
     if (trip.availableSlots <= 0) {
-      return res.status(400).json({ success: false, message: 'No slots available on this trip.' });
+      return res.status(400).json({ success: false, message: 'No capacity available on this trip.' });
     }
 
-    if (parcelDetails.weight > trip.availableSlots) {
+    if (weight > trip.availableSlots) {
       return res.status(400).json({
         success: false,
         message: `Only ${trip.availableSlots}kg capacity available.`,
@@ -84,16 +113,21 @@ const createBooking = async (req, res) => {
       return res.status(409).json({ success: false, message: 'You already have a booking on this trip.' });
     }
 
-    const amount = trip.pricePerSlot;
+    const pricePerKg = Number(trip.pricePerKg ?? trip.pricePerSlot);
+    if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
+      return res.status(500).json({ success: false, message: 'Trip pricing is not configured properly.' });
+    }
+
+    const amount = Number((weight * pricePerKg).toFixed(2));
     const booking = await Booking.create({
       tripId,
       customerId: req.user.id,
-      parcelDetails,
+      parcelDetails: { ...parcelDetails, weight },
       amount,
     });
 
     // Reduce available slots
-    await Trip.findByIdAndUpdate(tripId, { $inc: { availableSlots: -parcelDetails.weight } });
+    await Trip.findByIdAndUpdate(tripId, { $inc: { availableSlots: -weight } });
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate('tripId', 'from to date time driverId')
@@ -119,9 +153,40 @@ const getMyBookings = async (req, res) => {
         path: 'tripId',
         populate: { path: 'driverId', select: 'name phone' },
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.json({ success: true, bookings });
+    const driverIds = Array.from(
+      new Set(
+        bookings
+          .map((b) => b.tripId?.driverId?._id)
+          .filter(Boolean)
+          .map((id) => id.toString())
+      )
+    );
+
+    const profiles = await DriverProfile.find({ userId: { $in: driverIds } }).lean();
+    const byUserId = new Map(profiles.map((p) => [p.userId.toString(), p]));
+
+    const enriched = bookings.map((b) => {
+      const driverId = b.tripId?.driverId?._id?.toString();
+      const profile = driverId ? byUserId.get(driverId) : null;
+      const vehicleType = profile?.vehicleType || null;
+      return {
+        ...b,
+        driverVehicle: profile
+          ? {
+              vehicleType,
+              vehicleTypeDescription: VEHICLE_TYPE_INFO[vehicleType] || '',
+              vehicleNumber: profile.vehicleNumber || null,
+              vehicleName: profile.vehicleName || null,
+              vehicleColor: profile.vehicleColor || null,
+            }
+          : null,
+      };
+    });
+
+    res.json({ success: true, bookings: enriched });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

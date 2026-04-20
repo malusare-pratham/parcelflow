@@ -2,6 +2,8 @@ const Trip = require('../models/Trip');
 const DriverProfile = require('../models/DriverProfile');
 const Booking = require('../models/Booking');
 const path = require('path');
+const mongoose = require('mongoose');
+const { isCloudinaryEnabled, uploadBuffer } = require('../services/cloudinary');
 
 // @desc    Upload KYC documents
 // @route   POST /api/driver/upload-docs
@@ -9,19 +11,40 @@ const path = require('path');
 const uploadDocs = async (req, res) => {
   try {
     const files = req.files;
-    if (!files || Object.keys(files).length === 0) {
-      return res.status(400).json({ success: false, message: 'No files uploaded.' });
-    }
+    const hasFiles = !!files && Object.keys(files).length > 0;
 
     const updateData = {};
-    if (files.aadhaar) updateData.aadhaar = files.aadhaar[0].filename;
-    if (files.license) updateData.license = files.license[0].filename;
-    if (files.vehicleImage) updateData.vehicleImage = files.vehicleImage[0].filename;
-    if (files.selfie) updateData.selfie = files.selfie[0].filename;
+    if (hasFiles) {
+      const fields = ['aadhaar', 'license', 'vehicleImage', 'selfie'];
+      const enabled = isCloudinaryEnabled();
 
-    const { vehicleNumber, vehicleType } = req.body;
+      for (const field of fields) {
+        const file = files?.[field]?.[0];
+        if (!file) continue;
+
+        if (enabled) {
+          const result = await uploadBuffer(file.buffer, {
+            folder: `parcelflow/kyc/${req.user.id}`,
+            public_id: `${field}-${Date.now()}`,
+            resource_type: 'auto',
+          });
+          updateData[field] = result.secure_url;
+        } else {
+          updateData[field] = file.filename;
+        }
+      }
+    }
+
+    const { vehicleNumber, vehicleType, vehicleName, vehicleColor } = req.body;
     if (vehicleNumber) updateData.vehicleNumber = vehicleNumber;
     if (vehicleType) updateData.vehicleType = vehicleType;
+    if (vehicleName !== undefined) updateData.vehicleName = vehicleName || null;
+    if (vehicleColor !== undefined) updateData.vehicleColor = vehicleColor || null;
+
+    const hasUpdates = hasFiles || Object.keys(updateData).length > 0;
+    if (!hasUpdates) {
+      return res.status(400).json({ success: false, message: 'Please upload at least one document or update vehicle info.' });
+    }
 
     updateData.verificationStatus = 'pending';
 
@@ -65,9 +88,34 @@ const createTrip = async (req, res) => {
       });
     }
 
-    const { from, to, date, time, capacity, pricePerSlot, notes } = req.body;
+    const {
+      from,
+      pickupLocation,
+      to,
+      dropLocation,
+      date,
+      time,
+      arrivalTime,
+      capacity,
+      pricePerKg: pricePerKgRaw,
+      pricePerSlot,
+      notes,
+    } = req.body;
+    const resolvedPricePerKg = pricePerKgRaw ?? pricePerSlot;
 
-    if (!from || !to || !date || !time || !capacity || !pricePerSlot) {
+    if (
+      !from ||
+      !to ||
+      !pickupLocation ||
+      !dropLocation ||
+      !date ||
+      !time ||
+      !arrivalTime ||
+      !capacity ||
+      resolvedPricePerKg === undefined ||
+      resolvedPricePerKg === null ||
+      resolvedPricePerKg === ''
+    ) {
       return res.status(400).json({ success: false, message: 'All trip fields are required.' });
     }
 
@@ -75,15 +123,25 @@ const createTrip = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Trip date must be in the future.' });
     }
 
+    const pricePerKg = Number(resolvedPricePerKg);
+    if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
+      return res.status(400).json({ success: false, message: 'Price per kg must be a valid number.' });
+    }
+
     const trip = await Trip.create({
       driverId: req.user.id,
       from,
       to,
+      pickupLocation,
+      dropLocation,
       date,
       time,
+      arrivalTime,
       capacity: Number(capacity),
       availableSlots: Number(capacity),
-      pricePerSlot: Number(pricePerSlot),
+      pricePerKg,
+      // Also fill old field for compatibility.
+      pricePerSlot: pricePerKg,
       notes,
     });
 
@@ -105,6 +163,102 @@ const getMyTrips = async (req, res) => {
   }
 };
 
+// @desc    Update trip status (cancel/complete)
+// @route   PUT /api/driver/trips/:id/status
+// @access  Private (Driver)
+const updateTripStatus = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    const { status } = req.body;
+    if (!['cancelled', 'completed'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid status.' });
+    }
+
+    const tripId = req.params.id;
+    if (!mongoose.isValidObjectId(tripId)) {
+      return res.status(400).json({ success: false, message: 'Invalid trip id.' });
+    }
+
+    const trip = await Trip.findById(tripId);
+    if (!trip) {
+      return res.status(404).json({ success: false, message: 'Trip not found.' });
+    }
+    if (trip.driverId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized.' });
+    }
+
+    if (trip.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'Trip is already cancelled.' });
+    }
+    if (trip.status === 'completed') {
+      return res.status(400).json({ success: false, message: 'Trip is already completed.' });
+    }
+    if (trip.status === 'rejected') {
+      return res.status(400).json({ success: false, message: 'Rejected trips cannot be updated.' });
+    }
+
+    if (status === 'completed') {
+      if (trip.status !== 'approved') {
+        return res.status(400).json({ success: false, message: 'Only approved trips can be completed.' });
+      }
+      trip.status = 'completed';
+      await trip.save();
+      return res.json({ success: true, message: 'Trip marked as completed.', trip });
+    }
+
+    // status === 'cancelled'
+    if (!['pending', 'approved'].includes(trip.status)) {
+      return res.status(400).json({ success: false, message: `Cannot cancel a ${trip.status} trip.` });
+    }
+
+    await session.withTransaction(async () => {
+      // Disallow cancelling if delivery is already in progress/completed.
+      const progressed = await Booking.countDocuments(
+        { tripId: trip._id, status: { $in: ['picked', 'in-transit', 'delivered'] } },
+        { session }
+      );
+      if (progressed > 0) {
+        throw Object.assign(new Error('Cannot cancel trip with pickups/in-transit/delivered bookings.'), { status: 400 });
+      }
+
+      const activeBookings = await Booking.find(
+        { tripId: trip._id, status: { $ne: 'cancelled' } },
+        null,
+        { session }
+      );
+
+      // Restore capacity for any non-cancelled booking weights
+      const restoreKg = activeBookings.reduce((sum, b) => sum + (Number(b.parcelDetails?.weight) || 0), 0);
+      if (restoreKg > 0) {
+        await Trip.updateOne({ _id: trip._id }, { $inc: { availableSlots: restoreKg } }, { session });
+      }
+
+      // Cancel all those bookings
+      if (activeBookings.length > 0) {
+        await Booking.updateMany(
+          { _id: { $in: activeBookings.map((b) => b._id) } },
+          { $set: { status: 'cancelled', cancellationReason: 'Trip cancelled by driver' } },
+          { session }
+        );
+      }
+
+      await Trip.updateOne({ _id: trip._id }, { $set: { status: 'cancelled' } }, { session });
+    });
+
+    const updated = await Trip.findById(trip._id);
+    res.json({
+      success: true,
+      message: 'Trip cancelled. All bookings were cancelled automatically.',
+      trip: updated,
+    });
+  } catch (error) {
+    const httpStatus = error?.status || 500;
+    res.status(httpStatus).json({ success: false, message: error.message || 'Server error' });
+  } finally {
+    session.endSession();
+  }
+};
+
 // @desc    Get bookings on driver's trips
 // @route   GET /api/driver/bookings
 // @access  Private (Driver)
@@ -114,7 +268,7 @@ const getTripBookings = async (req, res) => {
     const tripIds = trips.map((t) => t._id);
 
     const bookings = await Booking.find({ tripId: { $in: tripIds } })
-      .populate('tripId', 'from to date time')
+      .populate('tripId', 'from to pickupLocation dropLocation date time')
       .populate('customerId', 'name phone')
       .sort({ createdAt: -1 });
 
@@ -189,4 +343,4 @@ const getEarnings = async (req, res) => {
   }
 };
 
-module.exports = { uploadDocs, getProfile, createTrip, getMyTrips, getTripBookings, updateBookingStatus, getEarnings };
+module.exports = { uploadDocs, getProfile, createTrip, getMyTrips, updateTripStatus, getTripBookings, updateBookingStatus, getEarnings };

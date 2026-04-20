@@ -1,3 +1,5 @@
+import { FA, Icons } from './fa'
+
 // Spinner
 export const Spinner = ({ size = 'md' }) => {
   const s = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-10 h-10' : 'w-6 h-6'
@@ -30,7 +32,7 @@ export const StatusBadge = ({ status }) => {
 // Empty state
 export const EmptyState = ({ icon, title, description, action }) => (
   <div className="empty-state">
-    <div className="text-5xl mb-4">{icon || '📭'}</div>
+    <div className="text-5xl mb-4">{icon || <FA icon={Icons.boxOpen} />}</div>
     <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
     {description && <p className="text-slate-400 text-sm mb-4 max-w-xs">{description}</p>}
     {action}
@@ -62,6 +64,7 @@ export const StatCard = ({ label, value, sub, color = 'brand', icon }) => {
 // Trip card
 export const TripCard = ({ trip, onClick, action }) => {
   const date = new Date(trip.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  const timeLabel = trip.arrivalTime ? `${trip.time} -> ${trip.arrivalTime}` : trip.time
   return (
     <div className="card-hover p-5 cursor-pointer animate-slide-up" onClick={onClick}>
       <div className="flex items-start justify-between gap-3 mb-4">
@@ -73,7 +76,7 @@ export const TripCard = ({ trip, onClick, action }) => {
             </svg>
             <span className="text-sm font-bold text-white truncate">{trip.to}</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">{date} • {trip.time}</p>
+          <p className="text-xs text-slate-400 mt-1">{date} • {timeLabel}</p>
         </div>
         <StatusBadge status={trip.status} />
       </div>
@@ -88,10 +91,18 @@ export const TripCard = ({ trip, onClick, action }) => {
           <p className="text-sm font-semibold text-brand-400">{trip.availableSlots}kg</p>
         </div>
         <div>
-          <p className="text-xs text-slate-500">Price/slot</p>
-          <p className="text-sm font-semibold text-white">₹{trip.pricePerSlot}</p>
+          <p className="text-xs text-slate-500">Price/kg</p>
+          <p className="text-sm font-semibold text-white">₹{trip.pricePerKg ?? trip.pricePerSlot}</p>
         </div>
       </div>
+
+      {(trip.pickupLocation || trip.dropLocation) && (
+        <div className="mt-3 text-xs text-slate-400 truncate">
+          <span className="text-slate-500 font-semibold">Pickup:</span> {trip.pickupLocation || '—'}
+          <span className="text-slate-600"> • </span>
+          <span className="text-slate-500 font-semibold">Drop:</span> {trip.dropLocation || '—'}
+        </div>
+      )}
 
       {trip.driverId && (
         <div className="mt-3 pt-3 border-t border-slate-800 flex items-center gap-2">

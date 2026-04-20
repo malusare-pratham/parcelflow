@@ -17,6 +17,16 @@ const tripSchema = new mongoose.Schema(
       required: [true, 'Destination is required'],
       trim: true,
     },
+    pickupLocation: {
+      type: String,
+      required: [true, 'Pickup location is required'],
+      trim: true,
+    },
+    dropLocation: {
+      type: String,
+      required: [true, 'Drop location is required'],
+      trim: true,
+    },
     date: {
       type: Date,
       required: [true, 'Trip date is required'],
@@ -24,6 +34,10 @@ const tripSchema = new mongoose.Schema(
     time: {
       type: String,
       required: [true, 'Trip time is required'],
+    },
+    arrivalTime: {
+      type: String,
+      default: null,
     },
     capacity: {
       type: Number,
@@ -34,9 +48,16 @@ const tripSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // New pricing model: price per kg
+    pricePerKg: {
+      type: Number,
+      required: [true, 'Price per kg is required'],
+      min: 0,
+    },
+    // Backward-compat (old field). Kept to avoid breaking older seeded data or clients.
     pricePerSlot: {
       type: Number,
-      required: [true, 'Price per slot is required'],
+      default: null,
       min: 0,
     },
     status: {

@@ -68,6 +68,8 @@ export default function MyBookingsPage() {
           <div className="space-y-4 animate-slide-up">
             {bookings.map(b => {
               const trip = b.tripId
+              const vehicle = b.driverVehicle
+              const timeLabel = trip?.time ? (trip.arrivalTime ? `${trip.time} -> ${trip.arrivalTime}` : trip.time) : null
               const date = trip ? new Date(trip.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '–'
               return (
                 <div key={b._id} className="card p-5">
@@ -82,7 +84,7 @@ export default function MyBookingsPage() {
                           {trip.from} → {trip.to}
                         </p>
                       )}
-                      <p className="text-xs text-slate-400 mt-0.5">{date} {trip?.time && `• ${trip.time}`}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{date} {timeLabel && `• ${timeLabel}`}</p>
                     </div>
                     <StatusBadge status={b.status} />
                   </div>
@@ -101,6 +103,24 @@ export default function MyBookingsPage() {
                       <p className="text-sm font-medium text-white">₹{b.amount}</p>
                     </div>
                   </div>
+
+                  {trip && (trip.pickupLocation || trip.dropLocation) && (
+                    <div className="text-xs text-slate-400 mb-4">
+                      <span className="text-slate-500 font-semibold">Pickup:</span> {trip.pickupLocation || '—'}
+                      <span className="text-slate-600"> • </span>
+                      <span className="text-slate-500 font-semibold">Drop:</span> {trip.dropLocation || '—'}
+                    </div>
+                  )}
+
+                  {vehicle && (
+                    <div className="text-xs text-slate-400 mb-4">
+                      <span className="text-slate-500 font-semibold">Vehicle:</span>{' '}
+                      <span className="capitalize">{vehicle.vehicleType}</span>
+                      {vehicle.vehicleName ? ` · ${vehicle.vehicleName}` : ''}
+                      {vehicle.vehicleColor ? ` · ${vehicle.vehicleColor}` : ''}
+                      {vehicle.vehicleNumber ? ` · ${vehicle.vehicleNumber}` : ''}
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-slate-400">

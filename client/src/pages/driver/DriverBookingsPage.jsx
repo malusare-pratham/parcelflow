@@ -78,6 +78,13 @@ export default function DriverBookingsPage() {
                         {b.tripId.from} → {b.tripId.to} · {new Date(b.tripId.date).toLocaleDateString('en-IN')}
                       </p>
                     )}
+                    {b.tripId && (b.tripId.pickupLocation || b.tripId.dropLocation) && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        Pickup: <span className="text-slate-400">{b.tripId.pickupLocation || '—'}</span>
+                        <span className="text-slate-700"> • </span>
+                        Drop: <span className="text-slate-400">{b.tripId.dropLocation || '—'}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-white">₹{b.amount}</p>

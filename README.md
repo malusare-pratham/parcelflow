@@ -225,7 +225,7 @@ For production, replace Multer local storage with **Cloudinary** or **AWS S3**:
 `userId · aadhaar · license · vehicleImage · selfie · vehicleNumber · vehicleType · verificationStatus (pending|approved|rejected) · rejectionReason · totalEarnings`
 
 ### Trip
-`driverId · from · to · date · time · capacity · availableSlots · pricePerSlot · status (pending|approved|rejected|completed) · notes`
+`driverId · from (origin city) · pickupLocation · to (destination city) · dropLocation · date · time · capacity · availableSlots · pricePerKg · status (pending|approved|rejected|completed) · notes`
 
 ### Booking
 `tripId · customerId · bookingId · parcelDetails{description,weight,receiverName,receiverPhone,deliveryAddress} · amount · status (booked|picked|in-transit|delivered|cancelled) · paymentStatus`

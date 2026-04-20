@@ -20,7 +20,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
             fontSize: '14px',
           },
           success: {
-            iconTheme: { primary: '#f97316', secondary: '#fff' },
+            iconTheme: { primary: '#3b82f6', secondary: '#fff' },
           },
           error: {
             iconTheme: { primary: '#ef4444', secondary: '#fff' },

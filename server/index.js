@@ -18,16 +18,53 @@ const allowedOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .map((s) => s.trim())
   .filter(Boolean);
 
+const tryParseUrl = (value) => {
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+};
+
+const isOriginAllowed = (origin) => {
+  if (!origin) return true;
+
+  // In dev, allow any origin to avoid Vite port / LAN IP headaches.
+  if ((process.env.NODE_ENV || 'development') !== 'production') return true;
+
+  if (!allowedOrigins.length) return false;
+  if (allowedOrigins.includes(origin)) return true;
+
+  const parsed = tryParseUrl(origin);
+  if (!parsed) return false;
+
+  const host = parsed.hostname;
+  return allowedOrigins.some((entry) => {
+    if (!entry) return false;
+    if (entry === origin) return true;
+
+    // Support wildcard hostnames like "*.vercel.app" in CLIENT_URLS.
+    if (entry.startsWith('*.')) {
+      const suffix = entry.slice(1); // ".vercel.app"
+      return host.endsWith(suffix);
+    }
+
+    // Support bare hostnames like "example.com" in CLIENT_URLS.
+    if (!entry.startsWith('http://') && !entry.startsWith('https://')) {
+      return host === entry;
+    }
+
+    return false;
+  });
+};
+
 app.use(
   cors({
     origin: (origin, cb) => {
       // Allow non-browser tools (curl/postman) and same-origin.
       if (!origin) return cb(null, true);
 
-      // In dev, allow any origin to avoid Vite port / LAN IP headaches.
-      if ((process.env.NODE_ENV || 'development') !== 'production') return cb(null, true);
-
-      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (isOriginAllowed(origin)) return cb(null, true);
       return cb(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,

@@ -6,13 +6,27 @@ import toast from 'react-hot-toast'
 
 const UPLOADS_URL = import.meta.env.VITE_UPLOADS_URL || '/uploads'
 
+const VEHICLE_TYPE_INFO = {
+  bike: 'Best for small parcels (lightweight).',
+  auto: 'Good for small–medium parcels.',
+  car: 'Good for medium parcels; safer handling vs two-wheelers.',
+  van: 'Suitable for medium–heavy parcels; higher capacity.',
+  truck: 'Best for heavy/bulky parcels; highest capacity.',
+}
+
+const resolveDocUrl = (value) => {
+  if (!value) return null
+  if (/^https?:\/\//i.test(value)) return value
+  return `${UPLOADS_URL}/${value}`
+}
+
 const FileInput = ({ label, name, file, onChange, hint, existing }) => (
   <div>
     <label className="label">{label}</label>
     {existing && (
       <div className="mb-2 flex items-center gap-2 text-xs text-green-400">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-        Previously uploaded · <a href={`${UPLOADS_URL}/${existing}`} target="_blank" rel="noreferrer" className="underline">View</a>
+        Previously uploaded · <a href={resolveDocUrl(existing)} target="_blank" rel="noreferrer" className="underline">View</a>
       </div>
     )}
     <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-xl cursor-pointer transition-colors
@@ -41,7 +55,7 @@ const FileInput = ({ label, name, file, onChange, hint, existing }) => (
 export default function UploadDocsPage() {
   const [profile, setProfile] = useState(null)
   const [files, setFiles] = useState({ aadhaar: null, license: null, vehicleImage: null, selfie: null })
-  const [vehicle, setVehicle] = useState({ vehicleNumber: '', vehicleType: 'bike' })
+  const [vehicle, setVehicle] = useState({ vehicleNumber: '', vehicleType: 'bike', vehicleName: '', vehicleColor: '' })
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
@@ -51,6 +65,8 @@ export default function UploadDocsPage() {
         setProfile(data.profile)
         if (data.profile?.vehicleNumber) setVehicle(v => ({ ...v, vehicleNumber: data.profile.vehicleNumber }))
         if (data.profile?.vehicleType) setVehicle(v => ({ ...v, vehicleType: data.profile.vehicleType }))
+        if (data.profile?.vehicleName) setVehicle(v => ({ ...v, vehicleName: data.profile.vehicleName }))
+        if (data.profile?.vehicleColor) setVehicle(v => ({ ...v, vehicleColor: data.profile.vehicleColor }))
       })
       .finally(() => setLoading(false))
   }, [])
@@ -64,13 +80,16 @@ export default function UploadDocsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const hasAtLeastOne = Object.values(files).some(Boolean)
-    if (!hasAtLeastOne && !vehicle.vehicleNumber) return toast.error('Please upload at least one document or update vehicle info')
+    const hasVehicleInfo = !!(vehicle.vehicleNumber || vehicle.vehicleName || vehicle.vehicleColor)
+    if (!hasAtLeastOne && !hasVehicleInfo) return toast.error('Please upload at least one document or update vehicle info')
     setSubmitting(true)
     try {
       const fd = new FormData()
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
       fd.append('vehicleNumber', vehicle.vehicleNumber)
       fd.append('vehicleType', vehicle.vehicleType)
+      fd.append('vehicleName', vehicle.vehicleName)
+      fd.append('vehicleColor', vehicle.vehicleColor)
       await api.post('/driver/upload-docs', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Documents submitted! Awaiting admin review.')
       const { data } = await api.get('/driver/profile')
@@ -128,8 +147,22 @@ export default function UploadDocsPage() {
                     <option key={t} value={t} className="bg-slate-800 capitalize">{t}</option>
                   ))}
                 </select>
+                <p className="text-xs text-slate-500 mt-1">{VEHICLE_TYPE_INFO[vehicle.vehicleType] || ''}</p>
+              </div>
+              <div>
+                <label className="label">Vehicle Name (Optional)</label>
+                <input className="input" placeholder="e.g. Swift, i20, Bolero" value={vehicle.vehicleName}
+                  onChange={e => setVehicle(p => ({ ...p, vehicleName: e.target.value }))} />
+              </div>
+              <div>
+                <label className="label">Vehicle Color (Optional)</label>
+                <input className="input" placeholder="e.g. White, Red" value={vehicle.vehicleColor}
+                  onChange={e => setVehicle(p => ({ ...p, vehicleColor: e.target.value }))} />
               </div>
             </div>
+            <p className="text-xs text-slate-400 mt-3">
+              This info (vehicle type/name/color/number) can be shown to customers so they know pickup vehicle details.
+            </p>
           </div>
 
           {/* Documents */}

@@ -84,9 +84,16 @@ export default function TripsPanel() {
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-slate-400">
                       <span>📅 {date} · {trip.time}</span>
                       <span>⚖️ {trip.capacity}kg capacity</span>
-                      <span>💰 ₹{trip.pricePerSlot}/slot</span>
+                      <span>💰 ₹{trip.pricePerKg ?? trip.pricePerSlot}/kg</span>
                       <span>🚗 {trip.driverId?.name} · {trip.driverId?.phone}</span>
                     </div>
+                    {(trip.pickupLocation || trip.dropLocation) && (
+                      <p className="text-xs text-slate-500 mt-2">
+                        Pickup: <span className="text-slate-400">{trip.pickupLocation || '—'}</span>
+                        <span className="text-slate-700"> • </span>
+                        Drop: <span className="text-slate-400">{trip.dropLocation || '—'}</span>
+                      </p>
+                    )}
                     {trip.notes && <p className="text-xs text-slate-500 mt-2">Note: {trip.notes}</p>}
                     {trip.rejectionReason && (
                       <p className="text-xs text-red-400 mt-2">Rejection: {trip.rejectionReason}</p>

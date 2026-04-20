@@ -28,6 +28,16 @@ const driverProfileSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    vehicleName: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    vehicleColor: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     vehicleType: {
       type: String,
       enum: ['bike', 'auto', 'car', 'van', 'truck'],

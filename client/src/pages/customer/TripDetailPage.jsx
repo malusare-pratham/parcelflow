@@ -14,7 +14,7 @@ export default function TripDetailPage() {
 
   useEffect(() => {
     api.get(`/customer/trips/${id}`)
-      .then(({ data }) => setTrip(data.trip))
+      .then(({ data }) => setTrip({ ...data.trip, driverVehicle: data.driverVehicle }))
       .catch(() => navigate('/trips'))
       .finally(() => setLoading(false))
   }, [id])
@@ -40,7 +40,8 @@ export default function TripDetailPage() {
             <div className="flex items-center gap-3">
               <div className="text-center">
                 <p className="font-display text-xl font-bold text-white">{trip.from}</p>
-                <p className="text-xs text-slate-500">Origin</p>
+                <p className="text-xs text-slate-500">Origin City</p>
+                {trip.pickupLocation && <p className="text-xs text-slate-400 mt-1">Pickup: {trip.pickupLocation}</p>}
               </div>
               <div className="flex items-center gap-1 text-brand-500">
                 <div className="w-16 h-px bg-brand-500/50" />
@@ -51,7 +52,8 @@ export default function TripDetailPage() {
               </div>
               <div className="text-center">
                 <p className="font-display text-xl font-bold text-white">{trip.to}</p>
-                <p className="text-xs text-slate-500">Destination</p>
+                <p className="text-xs text-slate-500">Destination City</p>
+                {trip.dropLocation && <p className="text-xs text-slate-400 mt-1">Drop: {trip.dropLocation}</p>}
               </div>
             </div>
             <StatusBadge status={trip.status} />
@@ -62,9 +64,12 @@ export default function TripDetailPage() {
             {[
               { label: 'Date', value: date },
               { label: 'Departure Time', value: trip.time },
+              { label: 'Arrival Time', value: trip.arrivalTime || '-' },
               { label: 'Total Capacity', value: `${trip.capacity} kg` },
-              { label: 'Available Slots', value: `${trip.availableSlots} kg` },
-              { label: 'Price per Slot', value: `₹${trip.pricePerSlot}` },
+              { label: 'Available Capacity', value: `${trip.availableSlots} kg` },
+              { label: 'Pickup Location', value: trip.pickupLocation || '—' },
+              { label: 'Drop Location', value: trip.dropLocation || '—' },
+              { label: 'Price per Kg', value: `₹${trip.pricePerKg ?? trip.pricePerSlot}/kg` },
               { label: 'Payment', value: 'Cash on Delivery' },
             ].map(item => (
               <div key={item.label} className="bg-slate-800/40 rounded-xl p-3">
@@ -101,6 +106,27 @@ export default function TripDetailPage() {
                   <p className="text-xs text-slate-400">{trip.driverId.phone}</p>
                 </div>
               </div>
+
+              {trip.driverVehicle && (
+                <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                  <div className="bg-slate-800/40 rounded-xl p-3">
+                    <p className="text-slate-500 mb-1">Vehicle Type</p>
+                    <p className="text-slate-200 font-semibold capitalize">{trip.driverVehicle.vehicleType}</p>
+                    {trip.driverVehicle.vehicleTypeDescription && (
+                      <p className="text-slate-400 mt-1">{trip.driverVehicle.vehicleTypeDescription}</p>
+                    )}
+                  </div>
+                  <div className="bg-slate-800/40 rounded-xl p-3">
+                    <p className="text-slate-500 mb-1">Vehicle Number</p>
+                    <p className="text-slate-200 font-semibold">{trip.driverVehicle.vehicleNumber || '—'}</p>
+                    {(trip.driverVehicle.vehicleName || trip.driverVehicle.vehicleColor) && (
+                      <p className="text-slate-400 mt-1">
+                        {[trip.driverVehicle.vehicleName, trip.driverVehicle.vehicleColor].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -119,7 +145,7 @@ export default function TripDetailPage() {
                   onClick={() => navigate(`/book/${trip._id}`)}
                   className="btn-primary w-full py-3 text-base"
                 >
-                  Book Parcel Slot →
+                  Book Parcel →
                 </button>
               ) : (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-300 text-center">
@@ -133,7 +159,7 @@ export default function TripDetailPage() {
             )
           ) : (
             <div className="bg-slate-800/50 border border-slate-700 rounded-xl p-3 text-sm text-slate-400 text-center">
-              {trip.availableSlots <= 0 ? 'No slots available' : 'Trip not available for booking'}
+              {trip.availableSlots <= 0 ? 'No capacity available' : 'Trip not available for booking'}
             </div>
           )}
         </div>

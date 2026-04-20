@@ -44,19 +44,19 @@ export default function HomePage() {
           <form onSubmit={handleSearch} className="card max-w-3xl mx-auto p-4 sm:p-5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <div>
-                <label className="label">From</label>
+                <label className="label">Origin (City)</label>
                 <input
                   className="input"
-                  placeholder="Origin city"
+                  placeholder="e.g. Pune"
                   value={from}
                   onChange={e => setFrom(e.target.value)}
                 />
               </div>
               <div>
-                <label className="label">To</label>
+                <label className="label">Destination (City)</label>
                 <input
                   className="input"
-                  placeholder="Destination city"
+                  placeholder="e.g. Mumbai"
                   value={to}
                   onChange={e => setTo(e.target.value)}
                 />
@@ -87,7 +87,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {[
             { step: '01', icon: '🔍', title: 'Search Trips', desc: 'Find drivers going your route on the date you need' },
-            { step: '02', icon: '📦', title: 'Book a Slot', desc: 'Reserve capacity on a verified driver\'s trip' },
+            { step: '02', icon: '📦', title: 'Book by Weight', desc: 'Reserve capacity (kg) on a verified driver\'s trip' },
             { step: '03', icon: '✅', title: 'Cash on Delivery', desc: 'Pay the driver in cash when parcel is delivered' },
           ].map(item => (
             <div key={item.step} className="card p-6 text-center hover:border-brand-500/30 transition-colors">

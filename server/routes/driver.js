@@ -7,6 +7,7 @@ const {
   getProfile,
   createTrip,
   getMyTrips,
+  updateTripStatus,
   getTripBookings,
   updateBookingStatus,
   getEarnings,
@@ -25,6 +26,7 @@ router.get('/profile', getProfile);
 router.post('/upload-docs', docUpload, uploadDocs);
 router.post('/create-trip', createTrip);
 router.get('/trips', getMyTrips);
+router.put('/trips/:id/status', updateTripStatus);
 router.get('/bookings', getTripBookings);
 router.put('/booking/:id/status', updateBookingStatus);
 router.get('/earnings', getEarnings);

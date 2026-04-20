@@ -11,7 +11,16 @@ export default function CreateTripPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [form, setForm] = useState({
-    from: '', to: '', date: '', time: '', capacity: '', pricePerSlot: '', notes: '',
+    from: '',
+    pickupLocation: '',
+    to: '',
+    dropLocation: '',
+    date: '',
+    time: '',
+    arrivalTime: '',
+    capacity: '',
+    pricePerKg: '',
+    notes: '',
   })
 
   useEffect(() => {
@@ -58,15 +67,19 @@ export default function CreateTripPage() {
             <h3 className="font-display text-base font-bold text-white mb-4">Route Details</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">From (Origin)</label>
+                <label className="label">Origin (City)</label>
                 <input className="input" placeholder="e.g. Pune" value={form.from} onChange={set('from')} required />
+                <label className="label mt-3">Pickup Location</label>
+                <input className="input" placeholder="e.g. Swargate, Pune" value={form.pickupLocation} onChange={set('pickupLocation')} required />
               </div>
               <div>
-                <label className="label">To (Destination)</label>
+                <label className="label">Destination (City)</label>
                 <input className="input" placeholder="e.g. Mumbai" value={form.to} onChange={set('to')} required />
+                <label className="label mt-3">Drop Location</label>
+                <input className="input" placeholder="e.g. Dadar, Mumbai" value={form.dropLocation} onChange={set('dropLocation')} required />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               <div>
                 <label className="label">Date</label>
                 <input type="date" className="input" min={today} value={form.date} onChange={set('date')} required />
@@ -74,6 +87,10 @@ export default function CreateTripPage() {
               <div>
                 <label className="label">Departure Time</label>
                 <input type="time" className="input" value={form.time} onChange={set('time')} required />
+              </div>
+              <div>
+                <label className="label">Arrival Time</label>
+                <input type="time" className="input" value={form.arrivalTime} onChange={set('arrivalTime')} required />
               </div>
             </div>
           </div>
@@ -88,9 +105,9 @@ export default function CreateTripPage() {
                 <p className="text-xs text-slate-500 mt-1">Max weight you can carry</p>
               </div>
               <div>
-                <label className="label">Price per Slot (₹)</label>
-                <input type="number" min="0" className="input" placeholder="e.g. 200" value={form.pricePerSlot} onChange={set('pricePerSlot')} required />
-                <p className="text-xs text-slate-500 mt-1">Collected cash on delivery</p>
+                <label className="label">Price per Kg (₹)</label>
+                <input type="number" min="0" className="input" placeholder="e.g. 50" value={form.pricePerKg} onChange={set('pricePerKg')} required />
+                <p className="text-xs text-slate-500 mt-1">Customer pays based on weight (cash on delivery)</p>
               </div>
             </div>
           </div>
@@ -118,6 +135,20 @@ export default function CreateTripPage() {
                 </svg>
                 <span className="font-bold text-white">{form.to}</span>
               </div>
+              {(form.pickupLocation || form.dropLocation) && (
+                <p className="text-xs text-slate-400 mb-3">
+                  Pickup: <span className="text-slate-300">{form.pickupLocation || '—'}</span>
+                  <span className="text-slate-600"> • </span>
+                  Drop: <span className="text-slate-300">{form.dropLocation || '—'}</span>
+                </p>
+              )}
+              <p className="text-xs text-slate-400 mb-3">
+                Time:{' '}
+                <span className="text-slate-300">
+                  {form.time || '-'}
+                  {form.arrivalTime ? ` -> ${form.arrivalTime}` : ''}
+                </span>
+              </p>
               <div className="grid grid-cols-3 gap-2 text-center text-xs">
                 <div className="bg-slate-800/50 rounded-lg p-2">
                   <p className="text-slate-500">Date</p>
@@ -129,7 +160,7 @@ export default function CreateTripPage() {
                 </div>
                 <div className="bg-slate-800/50 rounded-lg p-2">
                   <p className="text-slate-500">Price</p>
-                  <p className="text-brand-400 font-medium">{form.pricePerSlot ? `₹${form.pricePerSlot}` : '–'}</p>
+                  <p className="text-brand-400 font-medium">{form.pricePerKg ? `₹${form.pricePerKg}/kg` : '–'}</p>
                 </div>
               </div>
             </div>

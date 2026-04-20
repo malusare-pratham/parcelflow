@@ -25,7 +25,7 @@ export default function BookingPage() {
 
   useEffect(() => {
     api.get(`/customer/trips/${tripId}`)
-      .then(({ data }) => setTrip(data.trip))
+      .then(({ data }) => setTrip({ ...data.trip, driverVehicle: data.driverVehicle }))
       .catch(() => navigate('/trips'))
       .finally(() => setLoading(false))
   }, [tripId])
@@ -50,6 +50,13 @@ export default function BookingPage() {
   }
 
   if (loading) return <><Navbar /><PageLoader /></>
+
+  const pricePerKg = Number(trip?.pricePerKg ?? trip?.pricePerSlot ?? 0)
+  const enteredWeight = Number(form.weight)
+  const estimatedTotal =
+    Number.isFinite(pricePerKg) && enteredWeight > 0
+      ? Number((enteredWeight * pricePerKg).toFixed(2))
+      : null
 
   // Success screen
   if (booked) {
@@ -99,16 +106,39 @@ export default function BookingPage() {
         </Link>
 
         {trip && (
-          <div className="card p-4 mb-6 flex items-center justify-between">
+          <>
+            <div className="card p-4 mb-6 flex items-center justify-between">
             <div>
               <p className="font-semibold text-white text-sm">{trip.from} → {trip.to}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{new Date(trip.date).toLocaleDateString('en-IN')} • {trip.time}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{new Date(trip.date).toLocaleDateString('en-IN')} • {trip.arrivalTime ? `${trip.time} -> ${trip.arrivalTime}` : trip.time}</p>
             </div>
             <div className="text-right">
-              <p className="text-brand-400 font-bold">₹{trip.pricePerSlot}</p>
-              <p className="text-xs text-slate-500">per slot</p>
+              <p className="text-brand-400 font-bold">₹{pricePerKg}/kg</p>
+              <p className="text-xs text-slate-500">per kg</p>
             </div>
-          </div>
+            </div>
+
+            {(trip.pickupLocation || trip.dropLocation) && (
+              <div className="text-xs text-slate-400 mb-6">
+                <span className="text-slate-500 font-semibold">Pickup:</span> {trip.pickupLocation || '—'}
+                <span className="text-slate-600"> • </span>
+                <span className="text-slate-500 font-semibold">Drop:</span> {trip.dropLocation || '—'}
+              </div>
+            )}
+
+            {trip.driverVehicle && (
+              <div className="text-xs text-slate-400 mb-6">
+                <span className="text-slate-500 font-semibold">Vehicle:</span>{' '}
+                <span className="capitalize">{trip.driverVehicle.vehicleType}</span>
+                {trip.driverVehicle.vehicleName ? ` · ${trip.driverVehicle.vehicleName}` : ''}
+                {trip.driverVehicle.vehicleColor ? ` · ${trip.driverVehicle.vehicleColor}` : ''}
+                {trip.driverVehicle.vehicleNumber ? ` · ${trip.driverVehicle.vehicleNumber}` : ''}
+                {trip.driverVehicle.vehicleTypeDescription && (
+                  <span className="block text-slate-500 mt-1">{trip.driverVehicle.vehicleTypeDescription}</span>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6 animate-slide-up">
@@ -152,13 +182,15 @@ export default function BookingPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-white">Cash on Delivery</p>
-              <p className="text-xs text-slate-400">Pay ₹{trip?.pricePerSlot} to the driver upon delivery</p>
+              <p className="text-xs text-slate-400">
+                Pay ₹{estimatedTotal ?? '—'} to the driver upon delivery (₹{pricePerKg}/kg)
+              </p>
             </div>
           </div>
 
           <button type="submit" disabled={submitting} className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2">
             {submitting && <Spinner size="sm" />}
-            {submitting ? 'Confirming...' : `Confirm Booking · ₹${trip?.pricePerSlot}`}
+            {submitting ? 'Confirming...' : estimatedTotal ? `Confirm Booking · ₹${estimatedTotal}` : 'Confirm Booking'}
           </button>
         </form>
       </div>
