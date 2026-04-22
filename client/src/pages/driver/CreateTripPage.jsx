@@ -35,7 +35,19 @@ export default function CreateTripPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      await api.post('/driver/create-trip', form)
+      const payload = {
+        ...form,
+        from: form.from.trim(),
+        to: form.to.trim(),
+        pickupLocation: form.pickupLocation.trim(),
+        dropLocation: form.dropLocation.trim(),
+        notes: form.notes?.trim() || '',
+        arrivalTime: form.arrivalTime?.trim() || null,
+        capacity: form.capacity === '' ? '' : Number(form.capacity),
+        pricePerKg: form.pricePerKg === '' ? '' : Number(form.pricePerKg),
+      }
+
+      await api.post('/driver/create-trip', payload)
       toast.success('Trip created! Awaiting admin approval.')
       navigate('/driver/trips')
     } catch (err) {
@@ -45,7 +57,8 @@ export default function CreateTripPage() {
     }
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  // Use local date (not UTC) so the min date doesn't shift by timezone.
+  const today = new Date().toLocaleDateString('en-CA')
 
   return (
     <DriverLayout>
@@ -88,9 +101,9 @@ export default function CreateTripPage() {
                 <label className="label">Departure Time</label>
                 <input type="time" className="input" value={form.time} onChange={set('time')} required />
               </div>
-              <div>
-                <label className="label">Arrival Time</label>
-                <input type="time" className="input" value={form.arrivalTime} onChange={set('arrivalTime')} required />
+               <div>
+                <label className="label">Arrival Time (Optional)</label>
+                <input type="time" className="input" value={form.arrivalTime} onChange={set('arrivalTime')} />
               </div>
             </div>
           </div>

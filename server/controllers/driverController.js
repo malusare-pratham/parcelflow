@@ -88,42 +88,59 @@ const createTrip = async (req, res) => {
       });
     }
 
-    const {
-      from,
-      pickupLocation,
-      to,
-      dropLocation,
-      date,
-      time,
-      arrivalTime,
-      capacity,
-      pricePerKg: pricePerKgRaw,
-      pricePerSlot,
-      notes,
-    } = req.body;
-    const resolvedPricePerKg = pricePerKgRaw ?? pricePerSlot;
+    const raw = req.body || {};
+    const norm = (value) => (typeof value === 'string' ? value.trim() : value);
 
-    if (
-      !from ||
-      !to ||
-      !pickupLocation ||
-      !dropLocation ||
-      !date ||
-      !time ||
-      !arrivalTime ||
-      !capacity ||
-      resolvedPricePerKg === undefined ||
-      resolvedPricePerKg === null ||
-      resolvedPricePerKg === ''
-    ) {
-      return res.status(400).json({ success: false, message: 'All trip fields are required.' });
+    // Allow a few aliases so older clients / renamed form fields don't break trip creation.
+    const from = norm(raw.from ?? raw.origin);
+    const to = norm(raw.to ?? raw.destination);
+    const pickupLocation = norm(raw.pickupLocation ?? raw.pickup_location ?? raw.pickup);
+    const dropLocation = norm(raw.dropLocation ?? raw.dropOffLocation ?? raw.dropoffLocation ?? raw.drop);
+    const date = raw.date;
+    const time = norm(raw.time);
+    const arrivalTime = norm(raw.arrivalTime) || null; // optional
+    const capacityRaw = raw.capacity;
+    const notes = norm(raw.notes);
+
+    const resolvedPricePerKgRaw = raw.pricePerKg ?? raw.pricePerSlot;
+
+    const missing = [];
+    if (!from) missing.push('from');
+    if (!to) missing.push('to');
+    if (!pickupLocation) missing.push('pickupLocation');
+    if (!dropLocation) missing.push('dropLocation');
+    if (!date) missing.push('date');
+    if (!time) missing.push('time');
+    if (capacityRaw === undefined || capacityRaw === null || capacityRaw === '') missing.push('capacity');
+    if (resolvedPricePerKgRaw === undefined || resolvedPricePerKgRaw === null || resolvedPricePerKgRaw === '')
+      missing.push('pricePerKg');
+
+    if (missing.length) {
+      return res.status(400).json({
+        success: false,
+        message: `All trip fields are required: ${missing.join(', ')}.`,
+      });
     }
 
-    if (new Date(date) < new Date()) {
-      return res.status(400).json({ success: false, message: 'Trip date must be in the future.' });
+    const tripDate = new Date(date);
+    if (Number.isNaN(tripDate.getTime())) {
+      return res.status(400).json({ success: false, message: 'Trip date must be a valid date.' });
     }
 
-    const pricePerKg = Number(resolvedPricePerKg);
+    // Match UI validation: allow today, block only past dates.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    tripDate.setHours(0, 0, 0, 0);
+    if (tripDate < today) {
+      return res.status(400).json({ success: false, message: 'Trip date must be today or in the future.' });
+    }
+
+    const capacity = Number(capacityRaw);
+    if (!Number.isFinite(capacity) || capacity < 1) {
+      return res.status(400).json({ success: false, message: 'Capacity must be a valid number (min 1).' });
+    }
+
+    const pricePerKg = Number(resolvedPricePerKgRaw);
     if (!Number.isFinite(pricePerKg) || pricePerKg < 0) {
       return res.status(400).json({ success: false, message: 'Price per kg must be a valid number.' });
     }
@@ -134,11 +151,11 @@ const createTrip = async (req, res) => {
       to,
       pickupLocation,
       dropLocation,
-      date,
+      date: tripDate,
       time,
       arrivalTime,
-      capacity: Number(capacity),
-      availableSlots: Number(capacity),
+      capacity,
+      availableSlots: capacity,
       pricePerKg,
       // Also fill old field for compatibility.
       pricePerSlot: pricePerKg,
