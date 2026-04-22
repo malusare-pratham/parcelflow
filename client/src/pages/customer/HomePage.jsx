@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { useAuth } from '../../context/AuthContext'
+import DateInput from '../../components/DateInput'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -9,6 +10,7 @@ export default function HomePage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [date, setDate] = useState('')
+  const today = new Date().toLocaleDateString('en-CA')
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -63,13 +65,7 @@ export default function HomePage() {
               </div>
               <div>
                 <label className="label">Date</label>
-                <input
-                  type="date"
-                  className="input"
-                  value={date}
-                  onChange={e => setDate(e.target.value)}
-                  min={new Date().toISOString().split('T')[0]}
-                />
+                <DateInput value={date} onChange={e => setDate(e.target.value)} min={today} />
               </div>
             </div>
             <button type="submit" className="btn-primary w-full py-3 text-base">

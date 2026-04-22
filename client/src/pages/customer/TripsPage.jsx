@@ -3,10 +3,12 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { TripCard, PageLoader, EmptyState } from '../../components/UI'
 import api from '../../utils/api'
+import DateInput from '../../components/DateInput'
 
 export default function TripsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+  const today = new Date().toLocaleDateString('en-CA')
 
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
@@ -53,7 +55,7 @@ export default function TripsPage() {
             <input className="input" placeholder="Destination city" value={to} onChange={e => setTo(e.target.value)} />
             <div>
               <label className="label sm:hidden">Date</label>
-              <input type="date" className="input" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split('T')[0]} />
+              <DateInput value={date} onChange={e => setDate(e.target.value)} min={today} ariaLabel="Trip date" />
             </div>
             <button type="submit" className="btn-primary">Search</button>
           </div>

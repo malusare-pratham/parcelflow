@@ -4,6 +4,7 @@ import DriverLayout from '../../components/DriverLayout'
 import { Spinner } from '../../components/UI'
 import api from '../../utils/api'
 import toast from 'react-hot-toast'
+import DateInput from '../../components/DateInput'
 
 export default function CreateTripPage() {
   const navigate = useNavigate()
@@ -95,7 +96,13 @@ export default function CreateTripPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
               <div>
                 <label className="label">Date</label>
-                <input type="date" className="input" min={today} value={form.date} onChange={set('date')} required />
+                <DateInput
+                  value={form.date}
+                  onChange={set('date')}
+                  min={today}
+                  required
+                  ariaLabel="Trip date"
+                />
               </div>
               <div>
                 <label className="label">Departure Time</label>
