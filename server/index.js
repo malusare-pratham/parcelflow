@@ -84,7 +84,13 @@ app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'ParcelFlow API running' });
+  res.json({
+    status: 'ok',
+    message: 'ParcelFlow API running',
+    env: process.env.NODE_ENV || 'development',
+    commit: process.env.RENDER_GIT_COMMIT || null,
+    time: new Date().toISOString(),
+  });
 });
 
 // Global error handler

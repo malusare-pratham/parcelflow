@@ -119,6 +119,7 @@ const createTrip = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `All trip fields are required: ${missing.join(', ')}.`,
+        missingFields: missing,
       });
     }
 
