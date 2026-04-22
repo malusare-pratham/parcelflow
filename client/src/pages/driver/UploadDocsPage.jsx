@@ -79,17 +79,37 @@ export default function UploadDocsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const hasAtLeastOne = Object.values(files).some(Boolean)
-    const hasVehicleInfo = !!(vehicle.vehicleNumber || vehicle.vehicleName || vehicle.vehicleColor)
-    if (!hasAtLeastOne && !hasVehicleInfo) return toast.error('Please upload at least one document or update vehicle info')
+
+    const requiredDocs = ['aadhaar', 'license', 'vehicleImage', 'selfie']
+    const missingDocs = requiredDocs.filter((k) => !files[k] && !profile?.[k])
+
+    const vehicleNumber = vehicle.vehicleNumber.trim()
+    const vehicleType = vehicle.vehicleType
+    const vehicleName = vehicle.vehicleName.trim()
+    const vehicleColor = vehicle.vehicleColor.trim()
+
+    const missingVehicle = []
+    if (!vehicleNumber) missingVehicle.push('vehicle number')
+    if (!vehicleType) missingVehicle.push('vehicle type')
+    if (!vehicleName) missingVehicle.push('vehicle name')
+    if (!vehicleColor) missingVehicle.push('vehicle color')
+
+    if (missingVehicle.length) {
+      return toast.error(`Please fill: ${missingVehicle.join(', ')}`)
+    }
+
+    if (missingDocs.length) {
+      return toast.error(`Please upload: ${missingDocs.join(', ')}`)
+    }
+
     setSubmitting(true)
     try {
       const fd = new FormData()
       Object.entries(files).forEach(([k, v]) => { if (v) fd.append(k, v) })
-      fd.append('vehicleNumber', vehicle.vehicleNumber)
-      fd.append('vehicleType', vehicle.vehicleType)
-      fd.append('vehicleName', vehicle.vehicleName)
-      fd.append('vehicleColor', vehicle.vehicleColor)
+      fd.append('vehicleNumber', vehicleNumber)
+      fd.append('vehicleType', vehicleType)
+      fd.append('vehicleName', vehicleName)
+      fd.append('vehicleColor', vehicleColor)
       await api.post('/driver/upload-docs', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       toast.success('Documents submitted! Awaiting admin review.')
       const { data } = await api.get('/driver/profile')
@@ -137,12 +157,12 @@ export default function UploadDocsPage() {
               <div>
                 <label className="label">Vehicle Number</label>
                 <input className="input" placeholder="MH12AB1234" value={vehicle.vehicleNumber}
-                  onChange={e => setVehicle(p => ({ ...p, vehicleNumber: e.target.value }))} />
+                  onChange={e => setVehicle(p => ({ ...p, vehicleNumber: e.target.value }))} required />
               </div>
               <div>
                 <label className="label">Vehicle Type</label>
                 <select className="input" value={vehicle.vehicleType}
-                  onChange={e => setVehicle(p => ({ ...p, vehicleType: e.target.value }))}>
+                  onChange={e => setVehicle(p => ({ ...p, vehicleType: e.target.value }))} required>
                   {['bike', 'auto', 'car', 'van', 'truck'].map(t => (
                     <option key={t} value={t} className="bg-slate-800 capitalize">{t}</option>
                   ))}
@@ -150,14 +170,14 @@ export default function UploadDocsPage() {
                 <p className="text-xs text-slate-500 mt-1">{VEHICLE_TYPE_INFO[vehicle.vehicleType] || ''}</p>
               </div>
               <div>
-                <label className="label">Vehicle Name (Optional)</label>
+                <label className="label">Vehicle Name</label>
                 <input className="input" placeholder="e.g. Swift, i20, Bolero" value={vehicle.vehicleName}
-                  onChange={e => setVehicle(p => ({ ...p, vehicleName: e.target.value }))} />
+                  onChange={e => setVehicle(p => ({ ...p, vehicleName: e.target.value }))} required />
               </div>
               <div>
-                <label className="label">Vehicle Color (Optional)</label>
+                <label className="label">Vehicle Color</label>
                 <input className="input" placeholder="e.g. White, Red" value={vehicle.vehicleColor}
-                  onChange={e => setVehicle(p => ({ ...p, vehicleColor: e.target.value }))} />
+                  onChange={e => setVehicle(p => ({ ...p, vehicleColor: e.target.value }))} required />
               </div>
             </div>
             <p className="text-xs text-slate-400 mt-3">

@@ -10,17 +10,52 @@ const { isCloudinaryEnabled, uploadBuffer } = require('../services/cloudinary');
 // @access  Private (Driver)
 const uploadDocs = async (req, res) => {
   try {
+    const existingProfile = await DriverProfile.findOne({ userId: req.user.id });
     const files = req.files;
     const hasFiles = !!files && Object.keys(files).length > 0;
 
-    const updateData = {};
+    const norm = (value) => (typeof value === 'string' ? value.trim() : value);
+    const requiredDocFields = ['aadhaar', 'license', 'vehicleImage', 'selfie'];
+
+    const { vehicleNumber, vehicleType, vehicleName, vehicleColor } = req.body;
+    const normalizedVehicleNumber = norm(vehicleNumber);
+    const normalizedVehicleType = norm(vehicleType);
+    const normalizedVehicleName = norm(vehicleName);
+    const normalizedVehicleColor = norm(vehicleColor);
+
+    const missing = [];
+    if (!normalizedVehicleNumber) missing.push('vehicleNumber');
+    if (!normalizedVehicleType) missing.push('vehicleType');
+    if (!normalizedVehicleName) missing.push('vehicleName');
+    if (!normalizedVehicleColor) missing.push('vehicleColor');
+
+    for (const field of requiredDocFields) {
+      const hasNewFile = !!files?.[field]?.[0];
+      const hasExisting = !!existingProfile?.[field];
+      if (!hasNewFile && !hasExisting) missing.push(field);
+    }
+
+    if (missing.length) {
+      return res.status(400).json({
+        success: false,
+        message: `All fields are required: ${missing.join(', ')}.`,
+        missingFields: missing,
+      });
+    }
+
+    const updateData = {
+      vehicleNumber: normalizedVehicleNumber,
+      vehicleType: normalizedVehicleType,
+      vehicleName: normalizedVehicleName,
+      vehicleColor: normalizedVehicleColor,
+    };
+
     if (hasFiles) {
-      const fields = ['aadhaar', 'license', 'vehicleImage', 'selfie'];
       const enabled = isCloudinaryEnabled();
 
-      for (const field of fields) {
+      for (const field of requiredDocFields) {
         const file = files?.[field]?.[0];
-        if (!file) continue;
+        if (!file) continue; // allowed when already present in profile
 
         if (enabled) {
           const result = await uploadBuffer(file.buffer, {
@@ -33,17 +68,6 @@ const uploadDocs = async (req, res) => {
           updateData[field] = file.filename;
         }
       }
-    }
-
-    const { vehicleNumber, vehicleType, vehicleName, vehicleColor } = req.body;
-    if (vehicleNumber) updateData.vehicleNumber = vehicleNumber;
-    if (vehicleType) updateData.vehicleType = vehicleType;
-    if (vehicleName !== undefined) updateData.vehicleName = vehicleName || null;
-    if (vehicleColor !== undefined) updateData.vehicleColor = vehicleColor || null;
-
-    const hasUpdates = hasFiles || Object.keys(updateData).length > 0;
-    if (!hasUpdates) {
-      return res.status(400).json({ success: false, message: 'Please upload at least one document or update vehicle info.' });
     }
 
     updateData.verificationStatus = 'pending';
