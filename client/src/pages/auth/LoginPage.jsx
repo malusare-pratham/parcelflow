@@ -75,24 +75,6 @@ export default function LoginPage() {
           <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium">Create one</Link>
         </p>
 
-        {/* Demo credentials */}
-        <div className="mt-6 card p-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Demo Credentials</p>
-          <div className="space-y-2 text-xs font-mono">
-            <div className="flex justify-between text-slate-400">
-              <span className="text-slate-500">Admin:</span>
-              <span>admin / admin123</span>
-            </div>
-            <div className="flex justify-between text-slate-400">
-              <span className="text-slate-500">Driver:</span>
-              <span>9999900000 / driver123</span>
-            </div>
-            <div className="flex justify-between text-slate-400">
-              <span className="text-slate-500">Customer:</span>
-              <span>8888800000 / customer123</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   )

@@ -103,14 +103,6 @@ Open **http://localhost:5173**
 
 ---
 
-## 🔑 Demo Credentials
-
-| Role | Phone | Password |
-|---|---|---|
-| Admin | `0000000000` | `admin123` |
-| Driver | `9999900000` | `driver123` |
-| Customer | `8888800000` | `customer123` |
-
 ---
 
 ## 🧑‍💼 Role Workflows
