@@ -111,18 +111,46 @@ Open **http://localhost:5173**
 1. Register / Login
 2. Search trips by route + date
 3. View trip details
-4. Book a parcel slot (fill parcel details + receiver info)
+4. Book a parcel slot (fill parcel details + receiver info) â€” booking stays pending until driver confirms
 5. Receive Booking ID
 6. Track status in "My Bookings"
 7. Pay cash when delivered
 
+### ParcelFlow – Customer Instructions & Disclaimer
+ParcelFlow is only a platform to connect customers and drivers. We do not provide delivery service and we do not handle payments.
+
+**Before booking**
+- Enter correct pickup and delivery address
+- Provide a valid phone number
+- Add clear parcel details (and mark fragile items)
+
+**Packaging**
+- Pack properly and securely (use a strong box/cover)
+
+**Not allowed items**
+- Illegal items, dangerous/explosive items, drugs/restricted goods
+- If found, booking will be cancelled
+
+**Pickup & delivery**
+- Be on time at pickup, keep parcel ready (driver waits max 30 minutes)
+- Receiver must be available and reachable; share correct receiver details
+
+**Payment**
+- Cash on Delivery (COD) â€” pay directly to the driver; ParcelFlow does not handle payments
+
+**Important disclaimer**
+- ParcelFlow is not responsible for parcel loss/damage, delivery delays, or driver behavior
+- We only connect the customer and the driver; responsibility is between you and the driver
+
+In the app, customers can read the full version at `/customer-instructions`, and booking requires accepting these rules.
+
 ### Driver
 1. Register as Driver
-2. Upload KYC documents (Aadhaar, License, Vehicle Photo, Selfie)
+2. Upload KYC documents (Aadhaar, License, Vehicle RC, Vehicle Insurance, PUC Certificate, Vehicle Photo, Selfie with Vehicle)
 3. Wait for Admin verification
-4. Create trips (route, date, time, capacity, price)
+4. Create trips (route, date, time, capacity, price) — Maharashtra district dropdown (you can type any city/taluka)
 5. Wait for Admin trip approval
-6. View booked parcels
+6. View booking requests and confirm/reject them
 7. Update delivery status (Booked → Picked → In Transit → Delivered)
 8. Collect cash from customer on delivery
 
@@ -157,7 +185,7 @@ PUT  /api/customer/bookings/:id/cancel      — Cancel booking [auth: customer]
 ### Driver [auth: driver]
 ```
 GET  /api/driver/profile
-POST /api/driver/upload-docs         — Multipart: aadhaar, license, vehicleImage, selfie
+POST /api/driver/upload-docs         — Multipart: aadhaar, license, vehicleRC, vehicleInsurance, pucCertificate, vehicleImage, selfie
 POST /api/driver/create-trip
 GET  /api/driver/trips
 GET  /api/driver/bookings
@@ -170,6 +198,17 @@ GET  /api/driver/earnings
 GET  /api/admin/stats
 GET  /api/admin/drivers
 GET  /api/admin/drivers/:id
+
+---
+
+## 📝 Recent Changes (Dev Notes)
+
+### 2026-04-28
+- **Customer trip search date fix:** `/api/customer/trips?date=YYYY-MM-DD` आता local date म्हणून parse होतो (timezone shift मुळे trips mismatch होऊ नये म्हणून). (`server/controllers/customerController.js`)
+- **Show full trips in search:** trips search मध्ये `availableSlots > 0` filter काढला, त्यामुळे approved पण full trips सुद्धा list मध्ये दिसतात. (`server/controllers/customerController.js`)
+- **City dropdown/typing:** `Origin (City)` / `Destination (City)` inputs मध्ये dropdown + type-to-search add केला. (`client/src/components/CityCombobox.jsx`, `client/src/constants/cityOptions.js`, `client/src/pages/customer/HomePage.jsx`, `client/src/pages/customer/TripsPage.jsx`, `client/src/pages/driver/CreateTripPage.jsx`)
+- **Login → Book redirect:** `TripDetail` वरून “Login to Book” केल्यावर login नंतर auto `/book/:tripId` वर redirect होतो (`?next=` param वापरून). (`client/src/pages/customer/TripDetailPage.jsx`, `client/src/pages/auth/LoginPage.jsx`)
+- **Booking images required (min 2):** Book Parcel मध्ये किमान 2 images upload आवश्यक; mobile वर “Take Photo” option ने direct photo capture होतो. (`client/src/pages/customer/BookingPage.jsx`, `server/controllers/customerController.js`)
 PUT  /api/admin/verify-driver/:id    — { status: 'approved'|'rejected', rejectionReason? }
 GET  /api/admin/trips
 PUT  /api/admin/trips/:id/status     — { status: 'approved'|'rejected', rejectionReason? }
@@ -214,13 +253,15 @@ For production, replace Multer local storage with **Cloudinary** or **AWS S3**:
 `name · phone · email · password · role (admin|driver|customer) · isVerified · isActive`
 
 ### DriverProfile
-`userId · aadhaar · license · vehicleImage · selfie · vehicleNumber · vehicleType · verificationStatus (pending|approved|rejected) · rejectionReason · totalEarnings`
+`userId · aadhaar · license · vehicleRC · vehicleInsurance · pucCertificate · vehicleImage · selfie · vehicleNumber · vehicleName · vehicleColor · vehicleType · verificationStatus (pending|approved|rejected) · rejectionReason · totalEarnings`
 
 ### Trip
 `driverId · from (origin city) · pickupLocation · to (destination city) · dropLocation · date · time · capacity · availableSlots · pricePerKg · status (pending|approved|rejected|completed) · notes`
 
 ### Booking
-`tripId · customerId · bookingId · parcelDetails{description,weight,receiverName,receiverPhone,deliveryAddress} · amount · status (booked|picked|in-transit|delivered|cancelled) · paymentStatus`
+Note: `bookingId` is generated server-side (format `PF-XXXXXXXXXX`) and is unique per booking.
+
+`tripId · customerId · bookingId · confirmationStatus (pending|confirmed|rejected) · parcelDetails{description,weight,receiverName,receiverPhone,deliveryAddress} · amount · status (booked|picked|in-transit|delivered|cancelled) · paymentStatus`
 
 ---
 

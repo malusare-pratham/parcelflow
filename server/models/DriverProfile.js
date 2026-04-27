@@ -16,6 +16,18 @@ const driverProfileSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    vehicleRC: {
+      type: String,
+      default: null,
+    },
+    vehicleInsurance: {
+      type: String,
+      default: null,
+    },
+    pucCertificate: {
+      type: String,
+      default: null,
+    },
     vehicleImage: {
       type: String,
       default: null,

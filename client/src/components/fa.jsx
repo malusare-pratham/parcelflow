@@ -11,6 +11,8 @@ import {
   faLocationDot,
   faMagnifyingGlass,
   faMoneyBill1Wave,
+  faArrowRight,
+  faPhone,
   faRoute,
   faSpinner,
   faTrafficLight,
@@ -33,6 +35,8 @@ export const Icons = {
   locationDot: faLocationDot,
   magnifyingGlass: faMagnifyingGlass,
   money: faMoneyBill1Wave,
+  arrowRight: faArrowRight,
+  phone: faPhone,
   route: faRoute,
   spinner: faSpinner,
   trafficLight: faTrafficLight,
@@ -42,4 +46,3 @@ export const Icons = {
   users: faUserGroup,
   xmarkCircle: faXmarkCircle,
 }
-

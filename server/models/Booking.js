@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const bookingSchema = new mongoose.Schema(
   {
@@ -39,9 +40,18 @@ const bookingSchema = new mongoose.Schema(
         required: [true, 'Delivery address is required'],
       },
     },
+    parcelImages: {
+      type: [String],
+      default: [],
+    },
     amount: {
       type: Number,
       required: true,
+    },
+    confirmationStatus: {
+      type: String,
+      enum: ['pending', 'confirmed', 'rejected'],
+      default: 'pending',
     },
     status: {
       type: String,
@@ -61,6 +71,10 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    decisionAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -68,8 +82,9 @@ const bookingSchema = new mongoose.Schema(
 // Generate booking ID before saving
 bookingSchema.pre('save', function (next) {
   if (!this.bookingId) {
-    this.bookingId =
-      'PF-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
+    // More collision-resistant than Date.now + Math.random (still short & readable).
+    const rand = crypto.randomBytes(5).toString('hex').toUpperCase(); // 10 chars
+    this.bookingId = `PF-${rand}`;
   }
   next();
 });

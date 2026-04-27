@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { useAuth } from '../../context/AuthContext'
 import DateInput from '../../components/DateInput'
+import CityCombobox from '../../components/CityCombobox'
+import { CITY_OPTIONS } from '../../constants/cityOptions'
 
 export default function HomePage() {
   const { user } = useAuth()
@@ -47,20 +49,24 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <div>
                 <label className="label">Origin (City)</label>
-                <input
-                  className="input"
-                  placeholder="e.g. Pune"
+                <CityCombobox
                   value={from}
-                  onChange={e => setFrom(e.target.value)}
+                  onChange={setFrom}
+                  options={CITY_OPTIONS}
+                  placeholder="Select a district (or type any city/taluka)"
+                  inputId="customer-home-from"
+                  name="from"
                 />
               </div>
               <div>
                 <label className="label">Destination (City)</label>
-                <input
-                  className="input"
-                  placeholder="e.g. Mumbai"
+                <CityCombobox
                   value={to}
-                  onChange={e => setTo(e.target.value)}
+                  onChange={setTo}
+                  options={CITY_OPTIONS}
+                  placeholder="Select a district (or type any city/taluka)"
+                  inputId="customer-home-to"
+                  name="to"
                 />
               </div>
               <div>

@@ -5,6 +5,8 @@ import { Spinner } from '../../components/UI'
 import api from '../../utils/api'
 import toast from 'react-hot-toast'
 import DateInput from '../../components/DateInput'
+import CityCombobox from '../../components/CityCombobox'
+import { CITY_OPTIONS } from '../../constants/cityOptions'
 
 export default function CreateTripPage() {
   const navigate = useNavigate()
@@ -82,13 +84,29 @@ export default function CreateTripPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">Origin (City)</label>
-                <input className="input" placeholder="e.g. Pune" value={form.from} onChange={set('from')} required />
+                <CityCombobox
+                  value={form.from}
+                  onChange={(v) => setForm((p) => ({ ...p, from: v }))}
+                  options={CITY_OPTIONS}
+                  placeholder="Select a district (or type any city/taluka)"
+                  required
+                  inputId="trip-from-city"
+                  name="from"
+                />
                 <label className="label mt-3">Pickup Location</label>
                 <input className="input" placeholder="e.g. Swargate, Pune" value={form.pickupLocation} onChange={set('pickupLocation')} required />
               </div>
               <div>
                 <label className="label">Destination (City)</label>
-                <input className="input" placeholder="e.g. Mumbai" value={form.to} onChange={set('to')} required />
+                <CityCombobox
+                  value={form.to}
+                  onChange={(v) => setForm((p) => ({ ...p, to: v }))}
+                  options={CITY_OPTIONS}
+                  placeholder="Select a district (or type any city/taluka)"
+                  required
+                  inputId="trip-to-city"
+                  name="to"
+                />
                 <label className="label mt-3">Drop Location</label>
                 <input className="input" placeholder="e.g. Dadar, Mumbai" value={form.dropLocation} onChange={set('dropLocation')} required />
               </div>

@@ -10,12 +10,16 @@ const {
   updateTripStatus,
   getTripBookings,
   updateBookingStatus,
+  decideBookingRequest,
   getEarnings,
 } = require('../controllers/driverController');
 
 const docUpload = upload.fields([
   { name: 'aadhaar', maxCount: 1 },
   { name: 'license', maxCount: 1 },
+  { name: 'vehicleRC', maxCount: 1 },
+  { name: 'vehicleInsurance', maxCount: 1 },
+  { name: 'pucCertificate', maxCount: 1 },
   { name: 'vehicleImage', maxCount: 1 },
   { name: 'selfie', maxCount: 1 },
 ]);
@@ -28,6 +32,7 @@ router.post('/create-trip', createTrip);
 router.get('/trips', getMyTrips);
 router.put('/trips/:id/status', updateTripStatus);
 router.get('/bookings', getTripBookings);
+router.put('/booking/:id/decision', decideBookingRequest);
 router.put('/booking/:id/status', updateBookingStatus);
 router.get('/earnings', getEarnings);
 

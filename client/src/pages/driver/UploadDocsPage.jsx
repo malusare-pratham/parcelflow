@@ -54,7 +54,15 @@ const FileInput = ({ label, name, file, onChange, hint, existing }) => (
 
 export default function UploadDocsPage() {
   const [profile, setProfile] = useState(null)
-  const [files, setFiles] = useState({ aadhaar: null, license: null, vehicleImage: null, selfie: null })
+  const [files, setFiles] = useState({
+    aadhaar: null,
+    license: null,
+    vehicleRC: null,
+    vehicleInsurance: null,
+    pucCertificate: null,
+    vehicleImage: null,
+    selfie: null,
+  })
   const [vehicle, setVehicle] = useState({ vehicleNumber: '', vehicleType: 'bike', vehicleName: '', vehicleColor: '' })
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -80,7 +88,25 @@ export default function UploadDocsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const requiredDocs = ['aadhaar', 'license', 'vehicleImage', 'selfie']
+    const docLabels = {
+      aadhaar: 'Aadhaar Card',
+      license: 'Driving License',
+      vehicleRC: 'Vehicle RC',
+      vehicleInsurance: 'Vehicle Insurance',
+      pucCertificate: 'PUC Certificate',
+      vehicleImage: 'Vehicle Photo',
+      selfie: 'Selfie with Vehicle',
+    }
+
+    const requiredDocs = [
+      'aadhaar',
+      'license',
+      'vehicleRC',
+      'vehicleInsurance',
+      'pucCertificate',
+      'vehicleImage',
+      'selfie',
+    ]
     const missingDocs = requiredDocs.filter((k) => !files[k] && !profile?.[k])
 
     const vehicleNumber = vehicle.vehicleNumber.trim()
@@ -99,7 +125,7 @@ export default function UploadDocsPage() {
     }
 
     if (missingDocs.length) {
-      return toast.error(`Please upload: ${missingDocs.join(', ')}`)
+      return toast.error(`Please upload: ${missingDocs.map((k) => docLabels[k] || k).join(', ')}`)
     }
 
     setSubmitting(true)
@@ -114,7 +140,15 @@ export default function UploadDocsPage() {
       toast.success('Documents submitted! Awaiting admin review.')
       const { data } = await api.get('/driver/profile')
       setProfile(data.profile)
-      setFiles({ aadhaar: null, license: null, vehicleImage: null, selfie: null })
+      setFiles({
+        aadhaar: null,
+        license: null,
+        vehicleRC: null,
+        vehicleInsurance: null,
+        pucCertificate: null,
+        vehicleImage: null,
+        selfie: null,
+      })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Upload failed')
     } finally {
@@ -195,6 +229,15 @@ export default function UploadDocsPage() {
               <FileInput label="Driving License" name="license" file={files.license}
                 onChange={handleFile('license')} hint="JPG, PNG or PDF · Max 5MB"
                 existing={profile?.license} />
+              <FileInput label="Vehicle RC (Registration Certificate)" name="vehicleRC" file={files.vehicleRC}
+                onChange={handleFile('vehicleRC')} hint="JPG, PNG or PDF · Max 5MB"
+                existing={profile?.vehicleRC} />
+              <FileInput label="Vehicle Insurance (Active)" name="vehicleInsurance" file={files.vehicleInsurance}
+                onChange={handleFile('vehicleInsurance')} hint="Must be valid/active · JPG/PNG/PDF"
+                existing={profile?.vehicleInsurance} />
+              <FileInput label="PUC Certificate" name="pucCertificate" file={files.pucCertificate}
+                onChange={handleFile('pucCertificate')} hint="Pollution Under Control · JPG/PNG/PDF"
+                existing={profile?.pucCertificate} />
               <FileInput label="Vehicle Photo" name="vehicleImage" file={files.vehicleImage}
                 onChange={handleFile('vehicleImage')} hint="Clear photo of your vehicle"
                 existing={profile?.vehicleImage} />
@@ -209,6 +252,7 @@ export default function UploadDocsPage() {
             <ul className="space-y-1 list-disc list-inside">
               <li>All documents must be clear and legible</li>
               <li>Aadhaar and License must not be expired</li>
+              <li>Insurance must be active and PUC must be valid</li>
               <li>Admin review typically takes 24–48 hours</li>
               <li>You'll be notified of the decision</li>
             </ul>

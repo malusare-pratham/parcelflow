@@ -187,8 +187,11 @@ export default function DriverDetailPage() {
             <div className="grid grid-cols-2 gap-3">
               <DocPreview label="Aadhaar Card" filename={profile?.aadhaar} />
               <DocPreview label="Driving License" filename={profile?.license} />
+              <DocPreview label="Vehicle RC" filename={profile?.vehicleRC} />
+              <DocPreview label="Vehicle Insurance" filename={profile?.vehicleInsurance} />
+              <DocPreview label="PUC Certificate" filename={profile?.pucCertificate} />
               <DocPreview label="Vehicle Photo" filename={profile?.vehicleImage} />
-              <DocPreview label="Selfie" filename={profile?.selfie} />
+              <DocPreview label="Selfie with Vehicle" filename={profile?.selfie} />
             </div>
           </div>
 

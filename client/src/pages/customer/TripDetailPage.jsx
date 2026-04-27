@@ -11,6 +11,7 @@ export default function TripDetailPage() {
   const navigate = useNavigate()
   const [trip, setTrip] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [alreadyBooked, setAlreadyBooked] = useState(false)
 
   useEffect(() => {
     api.get(`/customer/trips/${id}`)
@@ -18,6 +19,16 @@ export default function TripDetailPage() {
       .catch(() => navigate('/trips'))
       .finally(() => setLoading(false))
   }, [id])
+
+  useEffect(() => {
+    if (!user || user.role !== 'customer') { setAlreadyBooked(false); return }
+    api.get('/customer/bookings/my')
+      .then(({ data }) => {
+        const has = (data.bookings || []).some((b) => b.status !== 'cancelled' && String(b.tripId?._id || b.tripId) === String(id))
+        setAlreadyBooked(Boolean(has))
+      })
+      .catch(() => setAlreadyBooked(false))
+  }, [id, user?._id, user?.role])
 
   if (loading) return <><Navbar /><PageLoader /></>
   if (!trip) return null
@@ -37,29 +48,52 @@ export default function TripDetailPage() {
 
           <div className="card p-6 mb-4 animate-slide-up">
           {/* Route header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+          <div className="relative mb-6">
             <div className="flex items-center justify-center gap-3 min-w-0">
-              <div className="text-center w-28 sm:w-auto min-w-0">
+              <div className="text-center w-32 sm:w-auto min-w-0">
                 <p className="font-display text-lg sm:text-xl font-bold text-white truncate">{trip.from}</p>
                 <p className="text-xs text-slate-500">Origin City</p>
                 {trip.pickupLocation && <p className="text-xs text-slate-400 mt-1">Pickup: {trip.pickupLocation}</p>}
               </div>
-              <div className="flex items-center gap-1 text-brand-500">
+              <div className="relative flex items-center gap-1 text-brand-500">
+                {(() => {
+                  if (!trip?.time || !trip?.arrivalTime) return null
+                  const match = (t) => String(t).trim().match(/^(\d{1,2}):(\d{2})$/)
+                  const startMatch = match(trip.time)
+                  const endMatch = match(trip.arrivalTime)
+                  if (!startMatch || !endMatch) return null
+                  const start = Number(startMatch[1]) * 60 + Number(startMatch[2])
+                  const end = Number(endMatch[1]) * 60 + Number(endMatch[2])
+                  if (!Number.isFinite(start) || !Number.isFinite(end)) return null
+                  let diff = end - start
+                  if (diff < 0) diff += 24 * 60
+                  const h = Math.floor(diff / 60)
+                  const m = diff % 60
+                  if (h <= 0 && m <= 0) return null
+                  const label = h > 0 && m > 0 ? `${h}h${m}` : h > 0 ? `${h}h` : `${m}m`
+                  return (
+                    <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-semibold text-slate-400 whitespace-nowrap">
+                      {label}
+                    </div>
+                  )
+                })()}
                 <div className="w-10 sm:w-16 h-px bg-brand-500/50" />
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
                 <div className="w-10 sm:w-16 h-px bg-brand-500/50" />
               </div>
-              <div className="text-center w-28 sm:w-auto min-w-0">
+              <div className="text-center w-32 sm:w-auto min-w-0">
                 <p className="font-display text-lg sm:text-xl font-bold text-white truncate">{trip.to}</p>
                 <p className="text-xs text-slate-500">Destination City</p>
                 {trip.dropLocation && <p className="text-xs text-slate-400 mt-1">Drop: {trip.dropLocation}</p>}
               </div>
             </div>
-            <div className="flex justify-end flex-shrink-0">
-              <StatusBadge status={trip.status} />
-            </div>
+            {trip.status !== 'approved' && (
+              <div className="absolute top-0 right-0">
+                <StatusBadge status={trip.status} />
+              </div>
+            )}
           </div>
 
           {/* Details grid */}
@@ -107,7 +141,6 @@ export default function TripDetailPage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-white truncate">{trip.driverId.name}</p>
-                    <p className="text-xs text-slate-400">{trip.driverId.phone}</p>
                   </div>
                 </div>
 
@@ -163,19 +196,28 @@ export default function TripDetailPage() {
           {trip.status === 'approved' && trip.availableSlots > 0 ? (
             user ? (
               user.role === 'customer' ? (
-                <button
-                  onClick={() => navigate(`/book/${trip._id}`)}
-                  className="btn-primary w-full py-3 text-base"
-                >
-                  Book Parcel →
-                </button>
+                alreadyBooked ? (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-300 text-center">
+                    <p className="mb-2">You already have a booking on this trip.</p>
+                    <button onClick={() => navigate('/my-bookings')} className="btn-secondary w-full py-3 text-base">
+                      View My Bookings
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => navigate(`/book/${trip._id}`)}
+                    className="btn-primary w-full py-3 text-base"
+                  >
+                    Book Parcel
+                  </button>
+                )
               ) : (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-300 text-center">
                   Only customers can book parcels
                 </div>
               )
             ) : (
-              <Link to="/login" className="btn-primary w-full py-3 text-base text-center block">
+              <Link to={`/login?next=${encodeURIComponent(`/book/${trip._id}`)}`} className="btn-primary w-full py-3 text-base text-center block">
                 Login to Book →
               </Link>
             )
@@ -189,3 +231,5 @@ export default function TripDetailPage() {
     </div>
   )
 }
+
+

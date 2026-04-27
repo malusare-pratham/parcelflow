@@ -1,6 +1,7 @@
 const Trip = require('../models/Trip');
 const Booking = require('../models/Booking');
 const DriverProfile = require('../models/DriverProfile');
+const { isCloudinaryEnabled, uploadBuffer } = require('../services/cloudinary');
 
 const VEHICLE_TYPE_INFO = {
   bike: 'Best for small parcels (lightweight).',
@@ -16,14 +17,21 @@ const VEHICLE_TYPE_INFO = {
 const getTrips = async (req, res) => {
   try {
     const { from, to, date } = req.query;
-    const filter = { status: 'approved', availableSlots: { $gt: 0 } };
+    // Show approved trips even if they're full; UI can display "Available: 0kg" and block booking.
+    const filter = { status: 'approved' };
 
     if (from) filter.from = { $regex: from, $options: 'i' };
     if (to) filter.to = { $regex: to, $options: 'i' };
     if (date) {
-      const start = new Date(date);
+      // Parse YYYY-MM-DD as a local calendar date to avoid UTC offset shifting.
+      const parts = String(date).split('-').map((p) => Number(p));
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
+        return res.status(400).json({ success: false, message: 'Invalid date format. Use YYYY-MM-DD.' });
+      }
+      const [yyyy, mm, dd] = parts;
+      const start = new Date(yyyy, mm - 1, dd);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
+      const end = new Date(yyyy, mm - 1, dd);
       end.setHours(23, 59, 59, 999);
       filter.date = { $gte: start, $lte: end };
     } else {
@@ -76,7 +84,29 @@ const getTripById = async (req, res) => {
 // @access  Private (Customer)
 const createBooking = async (req, res) => {
   try {
-    const { tripId, parcelDetails } = req.body;
+    const raw = req.body || {};
+
+    const tripId = raw.tripId;
+    let parcelDetails = raw.parcelDetails;
+
+    // Support multipart/form-data where parcelDetails may be a JSON string or flat fields.
+    if (typeof parcelDetails === 'string') {
+      try {
+        parcelDetails = JSON.parse(parcelDetails);
+      } catch {
+        return res.status(400).json({ success: false, message: 'Invalid parcelDetails JSON.' });
+      }
+    }
+
+    if (!parcelDetails) {
+      parcelDetails = {
+        description: raw.description,
+        weight: raw.weight,
+        receiverName: raw.receiverName,
+        receiverPhone: raw.receiverPhone,
+        deliveryAddress: raw.deliveryAddress,
+      };
+    }
 
     if (!tripId || !parcelDetails) {
       return res.status(400).json({ success: false, message: 'Trip ID and parcel details are required.' });
@@ -119,12 +149,62 @@ const createBooking = async (req, res) => {
     }
 
     const amount = Number((weight * pricePerKg).toFixed(2));
-    const booking = await Booking.create({
-      tripId,
-      customerId: req.user.id,
-      parcelDetails: { ...parcelDetails, weight },
-      amount,
-    });
+
+    // Parcel images upload (min 2, max 5) via multipart field name: parcelImages
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length < 2) {
+      return res.status(400).json({ success: false, message: 'Please upload at least 2 parcel images.' });
+    }
+    if (files.length > 5) {
+      return res.status(400).json({ success: false, message: 'You can upload up to 5 parcel images.' });
+    }
+
+    for (const f of files) {
+      if (!String(f.mimetype || '').startsWith('image/')) {
+        return res.status(400).json({ success: false, message: 'Only image files are allowed for parcel images.' });
+      }
+    }
+
+    const parcelImages = [];
+    if (files.length) {
+      const cloud = isCloudinaryEnabled();
+      if (cloud) {
+        const uploaded = await Promise.all(
+          files.map((f) =>
+            uploadBuffer(f.buffer, {
+              folder: `parcelflow/parcels/${req.user.id}`,
+              public_id: `parcel-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+              resource_type: 'image',
+            })
+          )
+        );
+        for (const r of uploaded) parcelImages.push(r.secure_url);
+      } else {
+        for (const f of files) {
+          if (f.filename) parcelImages.push(`/uploads/${f.filename}`);
+        }
+      }
+    }
+
+    // Create booking with retry for extremely-rare bookingId collisions.
+    let booking;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        booking = await Booking.create({
+          tripId,
+          customerId: req.user.id,
+          parcelDetails: { ...parcelDetails, weight },
+          parcelImages,
+          amount,
+          confirmationStatus: 'pending',
+        });
+        break;
+      } catch (err) {
+        // Mongo duplicate key (bookingId unique). Retry by re-creating (pre-save generates new bookingId).
+        if (err?.code === 11000 && attempt < 2) continue;
+        throw err;
+      }
+    }
 
     // Reduce available slots
     await Trip.findByIdAndUpdate(tripId, { $inc: { availableSlots: -weight } });

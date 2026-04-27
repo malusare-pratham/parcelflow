@@ -17,6 +17,8 @@ export const PageLoader = () => (
 export const StatusBadge = ({ status }) => {
   const map = {
     pending: 'badge-pending',
+    confirmed: 'badge-approved',
+    rejected: 'badge-rejected',
     approved: 'badge-approved',
     rejected: 'badge-rejected',
     delivered: 'badge-delivered',
@@ -62,24 +64,72 @@ export const StatCard = ({ label, value, sub, color = 'brand', icon }) => {
 }
 
 // Trip card
-export const TripCard = ({ trip, onClick, action }) => {
+export const TripCard = ({ trip, onClick, action, note }) => {
   const date = new Date(trip.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   const timeLabel = trip.arrivalTime ? `${trip.time} -> ${trip.arrivalTime}` : trip.time
+  const driverPhone = trip?.driverId?.phone ? String(trip.driverId.phone).replace(/[^\d+]/g, '') : null
+  const durationLabel = (() => {
+    if (!trip?.time || !trip?.arrivalTime) return null
+    const match = (t) => String(t).trim().match(/^(\d{1,2}):(\d{2})$/)
+    const startMatch = match(trip.time)
+    const endMatch = match(trip.arrivalTime)
+    if (!startMatch || !endMatch) return null
+    const start = Number(startMatch[1]) * 60 + Number(startMatch[2])
+    const end = Number(endMatch[1]) * 60 + Number(endMatch[2])
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return null
+    let diff = end - start
+    if (diff < 0) diff += 24 * 60
+    const h = Math.floor(diff / 60)
+    const m = diff % 60
+    if (h <= 0 && m <= 0) return null
+    if (h > 0 && m > 0) return `${h}h${m}`
+    if (h > 0) return `${h}h`
+    return `${m}m`
+  })()
   return (
     <div className="card-hover p-5 cursor-pointer animate-slide-up" onClick={onClick}>
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold text-white truncate">{trip.from}</span>
-            <svg className="w-4 h-4 text-brand-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-            <span className="text-sm font-bold text-white truncate">{trip.to}</span>
+      <div className="relative flex items-start justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-0 flex flex-col items-center">
+          <div className="flex items-end justify-center gap-12 sm:gap-8 text-center">
+            <div className="min-w-0">
+              <p className="text-xl sm:text-lg font-bold text-white">{trip.from}</p>
+              {trip.time && <p className="text-xs sm:text-sm text-slate-400 mt-1">{trip.time}</p>}
+            </div>
+
+            <span className="relative flex-shrink-0 pb-1">
+              {durationLabel && (
+                <span className="absolute -top-6 sm:-top-5 left-1/2 -translate-x-1/2 text-base sm:text-sm font-semibold text-slate-400 whitespace-nowrap">
+                  {durationLabel}
+                </span>
+              )}
+              <span className="flex items-center justify-center">
+                <span className="h-[2px] w-6 sm:w-7 bg-brand-500/70 rounded-full" />
+                <span className="mx-1 text-brand-500">
+                  <FA icon={Icons.arrowRight} className="w-5 h-5 sm:w-5 sm:h-5" />
+                </span>
+                <span className="h-[2px] w-6 sm:w-7 bg-brand-500/70 rounded-full" />
+              </span>
+            </span>
+
+            <div className="min-w-0">
+              <p className="text-xl sm:text-lg font-bold text-white">{trip.to}</p>
+              {trip.arrivalTime && <p className="text-xs sm:text-sm text-slate-400 mt-1">{trip.arrivalTime}</p>}
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1">{date} • {timeLabel}</p>
+          <p className="text-xs sm:text-sm text-slate-400 mt-3 text-center">{date}</p>
         </div>
-        <StatusBadge status={trip.status} />
+        {trip.status !== 'approved' && (
+          <div className="absolute top-0 right-0">
+            <StatusBadge status={trip.status} />
+          </div>
+        )}
       </div>
+
+      {note && (
+        <div className="mb-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2 text-xs text-amber-300">
+          {note}
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-3 text-center border-t border-slate-800 pt-4">
         <div>
@@ -109,9 +159,22 @@ export const TripCard = ({ trip, onClick, action }) => {
           <div className="w-6 h-6 bg-slate-700 rounded-full flex items-center justify-center">
             <span className="text-xs font-bold text-slate-300">{trip.driverId.name?.[0] || '?'}</span>
           </div>
-          <span className="text-xs text-slate-400">{trip.driverId.name}</span>
+          <span className="text-sm font-semibold text-slate-200">{trip.driverId.name}</span>
           <span className="text-xs text-slate-600">•</span>
-          <span className="text-xs text-slate-400">{trip.driverId.phone}</span>
+          {driverPhone ? (
+            <a
+              href={`tel:${driverPhone}`}
+              onClick={(e) => e.stopPropagation()}
+              className="ml-auto inline-flex items-center gap-2 px-3 h-9 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 hover:border-brand-500/40 hover:text-brand-300 transition-colors"
+              title="Call driver"
+              aria-label={`Call ${trip.driverId.name || 'driver'}`}
+            >
+              <FA icon={Icons.phone} />
+              <span className="text-xs font-semibold">Call</span>
+            </a>
+          ) : (
+            <span className="ml-auto text-xs text-slate-500">No phone</span>
+          )}
         </div>
       )}
 

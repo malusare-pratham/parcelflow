@@ -15,7 +15,15 @@ const uploadDocs = async (req, res) => {
     const hasFiles = !!files && Object.keys(files).length > 0;
 
     const norm = (value) => (typeof value === 'string' ? value.trim() : value);
-    const requiredDocFields = ['aadhaar', 'license', 'vehicleImage', 'selfie'];
+    const requiredDocFields = [
+      'aadhaar',
+      'license',
+      'vehicleRC',
+      'vehicleInsurance',
+      'pucCertificate',
+      'vehicleImage',
+      'selfie',
+    ];
 
     const { vehicleNumber, vehicleType, vehicleName, vehicleColor } = req.body;
     const normalizedVehicleNumber = norm(vehicleNumber);
@@ -341,6 +349,10 @@ const updateBookingStatus = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized.' });
     }
 
+    if ((booking.confirmationStatus || 'pending') !== 'confirmed') {
+      return res.status(400).json({ success: false, message: 'Booking is not confirmed yet.' });
+    }
+
     booking.status = status;
     if (status === 'delivered') {
       booking.paymentStatus = 'collected';
@@ -355,6 +367,90 @@ const updateBookingStatus = async (req, res) => {
     res.json({ success: true, message: `Booking marked as ${status}`, booking });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Confirm or reject a booking request
+// @route   PUT /api/driver/booking/:id/decision
+// @access  Private (Driver)
+const decideBookingRequest = async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    const { decision, rejectionReason } = req.body;
+    if (!['confirmed', 'rejected'].includes(decision)) {
+      return res.status(400).json({ success: false, message: 'Invalid decision.' });
+    }
+
+    const bookingId = req.params.id;
+    if (!mongoose.isValidObjectId(bookingId)) {
+      return res.status(400).json({ success: false, message: 'Invalid booking id.' });
+    }
+
+    const booking = await Booking.findById(bookingId).populate('tripId');
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found.' });
+    }
+
+    if (!booking.tripId || booking.tripId.driverId.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Not authorized.' });
+    }
+
+    if (booking.status === 'cancelled') {
+      return res.status(400).json({ success: false, message: 'Booking is cancelled.' });
+    }
+
+    const currentConfirmation = booking.confirmationStatus || 'pending';
+    if (currentConfirmation !== 'pending') {
+      return res.status(400).json({ success: false, message: `Booking already ${currentConfirmation}.` });
+    }
+
+    await session.withTransaction(async () => {
+      if (decision === 'confirmed') {
+        await Booking.updateOne(
+          { _id: booking._id },
+          { $set: { confirmationStatus: 'confirmed', decisionAt: new Date() } },
+          { session }
+        );
+        return;
+      }
+
+      // decision === 'rejected': cancel booking and restore capacity (Option A hold-release)
+      const weight = Number(booking.parcelDetails?.weight) || 0;
+      await Booking.updateOne(
+        { _id: booking._id },
+        {
+          $set: {
+            confirmationStatus: 'rejected',
+            decisionAt: new Date(),
+            status: 'cancelled',
+            cancellationReason: (typeof rejectionReason === 'string' && rejectionReason.trim()) ? rejectionReason.trim() : 'Rejected by driver',
+          },
+        },
+        { session }
+      );
+
+      if (weight > 0) {
+        await Trip.updateOne(
+          { _id: booking.tripId._id },
+          { $inc: { availableSlots: weight } },
+          { session }
+        );
+      }
+    });
+
+    const updated = await Booking.findById(booking._id)
+      .populate('tripId', 'from to pickupLocation dropLocation date time driverId')
+      .populate('customerId', 'name phone');
+
+    res.json({
+      success: true,
+      message: decision === 'confirmed' ? 'Booking confirmed.' : 'Booking rejected.',
+      booking: updated,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  } finally {
+    session.endSession();
   }
 };
 
@@ -385,4 +481,4 @@ const getEarnings = async (req, res) => {
   }
 };
 
-module.exports = { uploadDocs, getProfile, createTrip, getMyTrips, updateTripStatus, getTripBookings, updateBookingStatus, getEarnings };
+module.exports = { uploadDocs, getProfile, createTrip, getMyTrips, updateTripStatus, getTripBookings, updateBookingStatus, decideBookingRequest, getEarnings };

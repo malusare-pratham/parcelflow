@@ -1,12 +1,21 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Spinner } from '../../components/UI'
 
+const isSafeNextPath = (value) => {
+  if (!value) return false
+  if (typeof value !== 'string') return false
+  if (!value.startsWith('/')) return false
+  if (value.startsWith('//')) return false
+  return true
+}
+
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [form, setForm] = useState({ phone: '', password: '' })
   const [loading, setLoading] = useState(false)
 
@@ -16,6 +25,13 @@ export default function LoginPage() {
     try {
       const user = await login(form.phone, form.password)
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`)
+
+      const next = searchParams.get('next')
+      if (user.role === 'customer' && isSafeNextPath(next)) {
+        navigate(next)
+        return
+      }
+
       if (user.role === 'admin') navigate('/admin')
       else if (user.role === 'driver') navigate('/driver')
       else navigate('/')

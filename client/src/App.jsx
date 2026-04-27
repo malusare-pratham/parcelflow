@@ -11,6 +11,7 @@ import TripsPage from './pages/customer/TripsPage'
 import TripDetailPage from './pages/customer/TripDetailPage'
 import BookingPage from './pages/customer/BookingPage'
 import MyBookingsPage from './pages/customer/MyBookingsPage'
+import CustomerInstructionsPage from './pages/customer/CustomerInstructionsPage'
 
 // Driver
 import DriverDashboard from './pages/driver/DriverDashboard'
@@ -62,6 +63,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/trips" element={<TripsPage />} />
         <Route path="/trips/:id" element={<TripDetailPage />} />
+        <Route path="/customer-instructions" element={<CustomerInstructionsPage />} />
         <Route path="/book/:tripId" element={
           <RequireAuth role="customer"><BookingPage /></RequireAuth>
         } />
