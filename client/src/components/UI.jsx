@@ -90,15 +90,15 @@ export const TripCard = ({ trip, onClick, action, note }) => {
     <div className="card-hover p-5 cursor-pointer animate-slide-up" onClick={onClick}>
       <div className="relative flex items-start justify-between gap-3 mb-4">
         <div className="flex-1 min-w-0 flex flex-col items-center">
-          <div className="flex items-end justify-center gap-12 sm:gap-8 text-center">
+          <div className="flex items-end justify-center gap-10 sm:gap-6 text-center">
             <div className="min-w-0">
-              <p className="text-xl sm:text-lg font-bold text-white">{trip.from}</p>
-              {trip.time && <p className="text-xs sm:text-sm text-slate-400 mt-1">{trip.time}</p>}
+              <p className="text-sm sm:text-sm font-semibold text-white truncate max-w-[8.5rem] sm:max-w-[11rem]">{trip.from}</p>
+              {trip.time && <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">{trip.time}</p>}
             </div>
 
             <span className="relative flex-shrink-0 pb-1">
               {durationLabel && (
-                <span className="absolute -top-6 sm:-top-5 left-1/2 -translate-x-1/2 text-base sm:text-sm font-semibold text-slate-400 whitespace-nowrap">
+                <span className="absolute -top-5 sm:-top-4 left-1/2 -translate-x-1/2 text-xs font-semibold text-slate-400 whitespace-nowrap">
                   {durationLabel}
                 </span>
               )}
@@ -112,8 +112,8 @@ export const TripCard = ({ trip, onClick, action, note }) => {
             </span>
 
             <div className="min-w-0">
-              <p className="text-xl sm:text-lg font-bold text-white">{trip.to}</p>
-              {trip.arrivalTime && <p className="text-xs sm:text-sm text-slate-400 mt-1">{trip.arrivalTime}</p>}
+              <p className="text-sm sm:text-sm font-semibold text-white truncate max-w-[8.5rem] sm:max-w-[11rem]">{trip.to}</p>
+              {trip.arrivalTime && <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1">{trip.arrivalTime}</p>}
             </div>
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-3 text-center">{date}</p>

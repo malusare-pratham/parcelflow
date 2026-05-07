@@ -1,12 +1,21 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import toast from 'react-hot-toast'
 import { Spinner } from '../../components/UI'
 
+const isSafeNextPath = (value) => {
+  if (!value) return false
+  if (typeof value !== 'string') return false
+  if (!value.startsWith('/')) return false
+  if (value.startsWith('//')) return false
+  return true
+}
+
 export default function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [form, setForm] = useState({ name: '', phone: '', email: '', password: '', confirmPassword: '', role: 'customer' })
   const [loading, setLoading] = useState(false)
 
@@ -24,8 +33,13 @@ export default function RegisterPage() {
     try {
       const user = await register({ name: form.name, phone: form.phone, email: form.email, password: form.password, role: form.role })
       toast.success('Account created successfully!')
-      if (user.role === 'driver') navigate('/driver/upload-docs')
-      else navigate('/')
+      const next = searchParams.get('next')
+      if (isSafeNextPath(next)) {
+        navigate(next, { replace: true })
+        return
+      }
+      if (user.role === 'driver') navigate('/driver/upload-docs', { replace: true })
+      else navigate('/', { replace: true })
     } catch (err) {
       // Network/CORS errors often have no `response`, so fall back to `err.message`
       console.error('Registration error:', err)
@@ -108,7 +122,7 @@ export default function RegisterPage() {
 
         <p className="text-center text-sm text-slate-500 mt-4">
           Already have an account?{' '}
-          <Link to="/login" className="text-brand-400 hover:text-brand-300 font-medium">Sign in</Link>
+          <Link to={isSafeNextPath(searchParams.get('next')) ? `/login?next=${encodeURIComponent(searchParams.get('next'))}` : '/login'} className="text-brand-400 hover:text-brand-300 font-medium">Sign in</Link>
         </p>
       </div>
     </div>

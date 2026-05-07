@@ -35,8 +35,10 @@ const getTrips = async (req, res) => {
       end.setHours(23, 59, 59, 999);
       filter.date = { $gte: start, $lte: end };
     } else {
-      // Only future trips
-      filter.date = { $gte: new Date() };
+      // Only trips from today onwards (use local day start so "today" trips don't disappear after midnight).
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      filter.date = { $gte: startOfToday };
     }
 
     const trips = await Trip.find(filter)

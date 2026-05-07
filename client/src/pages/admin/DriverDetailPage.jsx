@@ -125,6 +125,14 @@ export default function DriverDetailPage() {
                   <span className="text-white capitalize">{profile.vehicleType || '–'}</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-slate-500">Name</span>
+                  <span className="text-white">{profile.vehicleName || 'â€“'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Color</span>
+                  <span className="text-white capitalize">{profile.vehicleColor || 'â€“'}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-slate-500">Total Trips</span>
                   <span className="text-white">{trips.length}</span>
                 </div>

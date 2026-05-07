@@ -1,11 +1,13 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useState } from 'react'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const next = `${location.pathname}${location.search || ''}`
 
   const handleLogout = () => {
     logout()
@@ -31,8 +33,8 @@ export default function Navbar() {
             {!user ? (
               <>
                 <Link to="/trips" className="btn-ghost text-sm">Browse Trips</Link>
-                <Link to="/login" className="btn-ghost text-sm">Login</Link>
-                <Link to="/register" className="btn-primary text-sm py-2 px-4">Get Started</Link>
+                <Link to={`/login?next=${encodeURIComponent(next)}`} className="btn-ghost text-sm">Login</Link>
+                <Link to={`/register?next=${encodeURIComponent(next)}`} className="btn-primary text-sm py-2 px-4">Get Started</Link>
               </>
             ) : user.role === 'customer' ? (
               <>

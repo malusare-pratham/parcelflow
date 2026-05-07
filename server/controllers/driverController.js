@@ -209,6 +209,7 @@ const getMyTrips = async (req, res) => {
     const trips = await Trip.find({ driverId: req.user.id }).sort({ createdAt: -1 });
     res.json({ success: true, trips });
   } catch (error) {
+    console.error('uploadDocs error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

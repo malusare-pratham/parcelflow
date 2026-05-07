@@ -27,14 +27,14 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${user.name.split(' ')[0]}!`)
 
       const next = searchParams.get('next')
-      if (user.role === 'customer' && isSafeNextPath(next)) {
-        navigate(next)
+      if (isSafeNextPath(next)) {
+        navigate(next, { replace: true })
         return
       }
 
-      if (user.role === 'admin') navigate('/admin')
-      else if (user.role === 'driver') navigate('/driver')
-      else navigate('/')
+      if (user.role === 'admin') navigate('/admin', { replace: true })
+      else if (user.role === 'driver') navigate('/driver', { replace: true })
+      else navigate('/', { replace: true })
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login failed')
     } finally {
@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-slate-500 mt-4">
           Don't have an account?{' '}
-          <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium">Create one</Link>
+          <Link to={isSafeNextPath(searchParams.get('next')) ? `/register?next=${encodeURIComponent(searchParams.get('next'))}` : '/register'} className="text-brand-400 hover:text-brand-300 font-medium">Create one</Link>
         </p>
 
       </div>

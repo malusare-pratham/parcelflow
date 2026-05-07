@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import Navbar from '../../components/Navbar'
 import { TripCard, PageLoader, EmptyState } from '../../components/UI'
@@ -117,9 +117,9 @@ export default function TripsPage() {
           <PageLoader />
         ) : trips.length === 0 ? (
           <EmptyState
-            icon="🚛"
-            title="No trips found"
-            description="Try adjusting your search criteria or check back later."
+            icon="🚚"
+            title="No trips available"
+            description="Try adjusting your search criteria, or check back later."
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -134,7 +134,7 @@ export default function TripsPage() {
                     onClick={() => navigate(`/trips/${trip._id}`)}
                     className="btn-primary w-full text-sm py-2"
                   >
-                    View & Book →
+                    {trip.status === 'approved' ? 'View & Book →' : `View (${trip.status})`}
                   </button>
                 }
               />
@@ -145,3 +145,4 @@ export default function TripsPage() {
     </div>
   )
 }
+

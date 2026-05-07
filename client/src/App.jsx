@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 
 // Auth
@@ -32,8 +32,12 @@ import CustomersPanel from './pages/admin/CustomersPanel'
 // Guards
 const RequireAuth = ({ children, role }) => {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <div className="min-h-screen flex items-center justify-center"><Spinner /></div>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) {
+    const next = `${location.pathname}${location.search || ''}`
+    return <Navigate to={`/login?next=${encodeURIComponent(next)}`} replace />
+  }
   if (role && user.role !== role) return <Navigate to={`/${user.role}`} replace />
   return children
 }

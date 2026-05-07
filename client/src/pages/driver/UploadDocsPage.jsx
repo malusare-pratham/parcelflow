@@ -136,7 +136,7 @@ export default function UploadDocsPage() {
       fd.append('vehicleType', vehicleType)
       fd.append('vehicleName', vehicleName)
       fd.append('vehicleColor', vehicleColor)
-      await api.post('/driver/upload-docs', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      await api.post('/driver/upload-docs', fd)
       toast.success('Documents submitted! Awaiting admin review.')
       const { data } = await api.get('/driver/profile')
       setProfile(data.profile)
