@@ -26,7 +26,7 @@ const DocPreview = ({ label, filename }) => {
         <a href={url} target="_blank" rel="noreferrer"
           className="flex items-center justify-center h-24 bg-slate-800 hover:bg-slate-700 transition-colors">
           <div className="text-center">
-            <span className="text-3xl">📄</span>
+            <span className="text-2xl font-bold text-slate-300" aria-hidden="true">PDF</span>
             <p className="text-xs text-brand-400 mt-1">View PDF</p>
           </div>
         </a>
@@ -118,19 +118,19 @@ export default function DriverDetailPage() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-slate-500">Number</span>
-                  <span className="text-white font-medium">{profile.vehicleNumber || '–'}</span>
+                  <span className="text-white font-medium">{profile.vehicleNumber || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Type</span>
-                  <span className="text-white capitalize">{profile.vehicleType || '–'}</span>
+                  <span className="text-white capitalize">{profile.vehicleType || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Name</span>
-                  <span className="text-white">{profile.vehicleName || 'â€“'}</span>
+                  <span className="text-white">{profile.vehicleName || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Color</span>
-                  <span className="text-white capitalize">{profile.vehicleColor || 'â€“'}</span>
+                  <span className="text-white capitalize">{profile.vehicleColor || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Total Trips</span>
@@ -150,11 +150,11 @@ export default function DriverDetailPage() {
                 className="btn-primary w-full flex items-center justify-center gap-2"
               >
                 {submitting && <Spinner size="sm" />}
-                ✅ Approve Driver
+                Approve Driver
               </button>
               {!showRejectForm ? (
                 <button onClick={() => setShowRejectForm(true)} className="btn-danger w-full">
-                  ❌ Reject Driver
+                  Reject Driver
                 </button>
               ) : (
                 <div className="space-y-2">

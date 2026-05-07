@@ -3,7 +3,7 @@ const DriverProfile = require('../models/DriverProfile');
 const Booking = require('../models/Booking');
 const path = require('path');
 const mongoose = require('mongoose');
-const { isCloudinaryEnabled, uploadBuffer } = require('../services/cloudinary');
+const { isCloudinaryEnabled, uploadBuffer, cloudinaryState } = require('../services/cloudinary');
 
 // @desc    Upload KYC documents
 // @route   POST /api/driver/upload-docs
@@ -13,6 +13,15 @@ const uploadDocs = async (req, res) => {
     const existingProfile = await DriverProfile.findOne({ userId: req.user.id });
     const files = req.files;
     const hasFiles = !!files && Object.keys(files).length > 0;
+
+    if ((process.env.NODE_ENV || 'development') !== 'production') {
+      console.log('uploadDocs:', {
+        userId: req.user.id,
+        bodyKeys: Object.keys(req.body || {}),
+        fileFields: files ? Object.keys(files) : [],
+        hasFiles,
+      });
+    }
 
     const norm = (value) => (typeof value === 'string' ? value.trim() : value);
     const requiredDocFields = [
@@ -60,18 +69,29 @@ const uploadDocs = async (req, res) => {
 
     if (hasFiles) {
       const enabled = isCloudinaryEnabled();
+      if ((process.env.NODE_ENV || 'development') !== 'production') {
+        console.log('uploadDocs storage:', { cloudinaryEnabled: enabled, cloudinaryState });
+      }
 
       for (const field of requiredDocFields) {
         const file = files?.[field]?.[0];
         if (!file) continue; // allowed when already present in profile
 
         if (enabled) {
-          const result = await uploadBuffer(file.buffer, {
-            folder: `parcelflow/kyc/${req.user.id}`,
-            public_id: `${field}-${Date.now()}`,
-            resource_type: 'auto',
-          });
-          updateData[field] = result.secure_url;
+          try {
+            const result = await uploadBuffer(file.buffer, {
+              folder: `parcelflow/kyc/${req.user.id}`,
+              public_id: `${field}-${Date.now()}`,
+              resource_type: 'auto',
+            });
+            updateData[field] = result.secure_url;
+          } catch (err) {
+            console.error(`uploadDocs cloudinary failed (${field}):`, err);
+            return res.status(500).json({
+              success: false,
+              message: `Cloud upload failed for ${field}.`,
+            });
+          }
         } else {
           updateData[field] = file.filename;
         }
@@ -88,6 +108,7 @@ const uploadDocs = async (req, res) => {
 
     res.json({ success: true, message: 'Documents uploaded. Awaiting admin verification.', profile });
   } catch (error) {
+    console.error('uploadDocs error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -209,7 +230,6 @@ const getMyTrips = async (req, res) => {
     const trips = await Trip.find({ driverId: req.user.id }).sort({ createdAt: -1 });
     res.json({ success: true, trips });
   } catch (error) {
-    console.error('uploadDocs error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
