@@ -51,7 +51,7 @@ export default function CreateTripPage() {
       }
 
       await api.post('/driver/create-trip', payload)
-      toast.success('Trip created! Awaiting admin approval.')
+      toast.success('Trip created and live for customers!')
       navigate('/driver/trips')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to create trip')
@@ -210,7 +210,7 @@ export default function CreateTripPage() {
             className="btn-primary w-full py-3 flex items-center justify-center gap-2"
           >
             {submitting && <Spinner size="sm" />}
-            {submitting ? 'Creating...' : 'Submit Trip for Approval →'}
+            {submitting ? 'Creating...' : 'Create & Publish Trip →'}
           </button>
         </form>
       </div>

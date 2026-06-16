@@ -1,46 +1,63 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import api from '../utils/api'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
+import api, { setAccessToken } from '../utils/api'
 
 const AuthContext = createContext(null)
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const authVersion = useRef(0)
 
   useEffect(() => {
-    const stored = localStorage.getItem('pf_user')
-    const token = localStorage.getItem('pf_token')
-    if (stored && token) {
-      setUser(JSON.parse(stored))
+    let alive = true
+    const version = authVersion.current
+    api.post('/auth/refresh')
+      .then(({ data }) => {
+        if (!alive || version !== authVersion.current) return
+        setAccessToken(data.accessToken)
+        setUser(data.user)
+      })
+      .catch(() => {
+        if (!alive || version !== authVersion.current) return
+        setAccessToken(null)
+        setUser(null)
+      })
+      .finally(() => {
+        if (alive && version === authVersion.current) setLoading(false)
+      })
+    return () => {
+      alive = false
     }
-    setLoading(false)
   }, [])
 
   const login = useCallback(async (phone, password) => {
+    authVersion.current += 1
     const { data } = await api.post('/auth/login', { phone, password })
-    localStorage.setItem('pf_token', data.token)
-    localStorage.setItem('pf_user', JSON.stringify(data.user))
+    setAccessToken(data.accessToken)
     setUser(data.user)
+    setLoading(false)
     return data.user
   }, [])
 
   const register = useCallback(async (payload) => {
+    authVersion.current += 1
     const { data } = await api.post('/auth/register', payload)
-    localStorage.setItem('pf_token', data.token)
-    localStorage.setItem('pf_user', JSON.stringify(data.user))
+    setAccessToken(data.accessToken)
     setUser(data.user)
+    setLoading(false)
     return data.user
   }, [])
 
   const logout = useCallback(() => {
-    localStorage.removeItem('pf_token')
-    localStorage.removeItem('pf_user')
+    authVersion.current += 1
+    api.post('/auth/logout').catch(() => {})
+    setAccessToken(null)
     setUser(null)
+    setLoading(false)
   }, [])
 
   const refreshUser = useCallback(async () => {
     const { data } = await api.get('/auth/me')
-    localStorage.setItem('pf_user', JSON.stringify(data.user))
     setUser(data.user)
   }, [])
 

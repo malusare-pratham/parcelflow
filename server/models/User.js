@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+let bcrypt;
+try {
+  bcrypt = require('bcrypt');
+} catch {
+  bcrypt = require('bcryptjs');
+}
 
 const userSchema = new mongoose.Schema(
   {
@@ -37,6 +42,22 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    lockUntil: {
+      type: Date,
+      default: null,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -44,7 +65,8 @@ const userSchema = new mongoose.Schema(
 // Hash password before saving
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+  const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
+  this.password = await bcrypt.hash(this.password, rounds);
   next();
 });
 

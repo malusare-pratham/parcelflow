@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 // Always load env from the server folder (robust even if started from repo root)
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
@@ -11,8 +13,16 @@ const customerRoutes = require('./routes/customer');
 const adminRoutes = require('./routes/admin');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // Middleware
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: (process.env.NODE_ENV || 'development') === 'production' ? undefined : false,
+  })
+);
+
 const allowedOrigins = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
   .split(',')
   .map((s) => s.trim())
@@ -72,6 +82,7 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Static files for uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

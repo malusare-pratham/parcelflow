@@ -26,8 +26,8 @@ export default function RegisterPage() {
     if (form.password !== form.confirmPassword) {
       return toast.error('Passwords do not match')
     }
-    if (form.password.length < 6) {
-      return toast.error('Password must be at least 6 characters')
+    if (form.password.length < 8) {
+      return toast.error('Password must be at least 8 characters')
     }
     setLoading(true)
     try {
@@ -100,7 +100,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="label">Password</label>
-            <input type="password" className="input" placeholder="Min. 6 characters" value={form.password} onChange={set('password')} required />
+            <input type="password" className="input" placeholder="Min. 8 characters" value={form.password} onChange={set('password')} required />
           </div>
 
           <div>

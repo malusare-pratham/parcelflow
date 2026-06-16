@@ -2,6 +2,8 @@ const Trip = require('../models/Trip');
 const Booking = require('../models/Booking');
 const DriverProfile = require('../models/DriverProfile');
 const { isCloudinaryEnabled, uploadBuffer } = require('../services/cloudinary');
+const { createBookingSchema } = require('../validation/schemas');
+const { writeAuditLog } = require('../utils/audit');
 
 const VEHICLE_TYPE_INFO = {
   bike: 'Best for small parcels (lightweight).',
@@ -110,16 +112,20 @@ const createBooking = async (req, res) => {
       };
     }
 
-    if (!tripId || !parcelDetails) {
-      return res.status(400).json({ success: false, message: 'Trip ID and parcel details are required.' });
+    const parsed = createBookingSchema.safeParse({ tripId, parcelDetails });
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      return res.status(400).json({
+        success: false,
+        message: issue?.message || 'Invalid booking details.',
+        field: issue?.path?.join('.') || null,
+      });
     }
 
-    const weight = Number(parcelDetails.weight);
-    if (!Number.isFinite(weight) || weight <= 0) {
-      return res.status(400).json({ success: false, message: 'Parcel weight must be a valid number.' });
-    }
+    const validated = parsed.data;
+    const weight = validated.parcelDetails.weight;
 
-    const trip = await Trip.findById(tripId);
+    const trip = await Trip.findById(validated.tripId);
     if (!trip) {
       return res.status(404).json({ success: false, message: 'Trip not found.' });
     }
@@ -140,7 +146,7 @@ const createBooking = async (req, res) => {
     }
 
     // Check if customer already has a booking on this trip
-    const existingBooking = await Booking.findOne({ tripId, customerId: req.user.id, status: { $ne: 'cancelled' } });
+    const existingBooking = await Booking.findOne({ tripId: validated.tripId, customerId: req.user.id, status: { $ne: 'cancelled' } });
     if (existingBooking) {
       return res.status(409).json({ success: false, message: 'You already have a booking on this trip.' });
     }
@@ -193,9 +199,9 @@ const createBooking = async (req, res) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         booking = await Booking.create({
-          tripId,
+          tripId: validated.tripId,
           customerId: req.user.id,
-          parcelDetails: { ...parcelDetails, weight },
+          parcelDetails: validated.parcelDetails,
           parcelImages,
           amount,
           confirmationStatus: 'pending',
@@ -209,7 +215,7 @@ const createBooking = async (req, res) => {
     }
 
     // Reduce available slots
-    await Trip.findByIdAndUpdate(tripId, { $inc: { availableSlots: -weight } });
+    await Trip.findByIdAndUpdate(validated.tripId, { $inc: { availableSlots: -weight } });
 
     const populatedBooking = await Booking.findById(booking._id)
       .populate('tripId', 'from to date time driverId')
@@ -299,6 +305,12 @@ const cancelBooking = async (req, res) => {
     // Restore available slots
     await Trip.findByIdAndUpdate(booking.tripId, {
       $inc: { availableSlots: booking.parcelDetails.weight },
+    });
+    await writeAuditLog(req, {
+      action: 'booking.cancelled',
+      targetType: 'booking',
+      targetId: booking._id,
+      metadata: { tripId: booking.tripId, reason: booking.cancellationReason },
     });
 
     res.json({ success: true, message: 'Booking cancelled.', booking });

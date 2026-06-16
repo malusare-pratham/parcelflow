@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 export default function TripsPanel() {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pending')
+  const [filter, setFilter] = useState('approved')
   const [searchParams] = useSearchParams()
   const [actionModal, setActionModal] = useState({ open: false, trip: null, action: null })
   const [rejectionReason, setRejectionReason] = useState('')
@@ -46,13 +46,13 @@ export default function TripsPanel() {
     }
   }
 
-  const tabs = ['pending', 'approved', 'rejected', 'all']
+  const tabs = ['approved', 'rejected', 'pending', 'all']
 
   return (
     <AdminLayout>
       <div className="page-header">
-        <h1 className="page-title">Trip Approvals</h1>
-        <p className="page-subtitle">Review and approve driver trip submissions</p>
+        <h1 className="page-title">Trip Management</h1>
+        <p className="page-subtitle">Monitor live driver trips and reject unsafe or incorrect listings</p>
       </div>
 
       <div className="flex gap-2 mb-6 overflow-x-auto pb-1">

@@ -4,6 +4,7 @@ const Booking = require('../models/Booking');
 const path = require('path');
 const mongoose = require('mongoose');
 const { isCloudinaryEnabled, uploadBuffer, cloudinaryState } = require('../services/cloudinary');
+const { writeAuditLog } = require('../utils/audit');
 
 // @desc    Upload KYC documents
 // @route   POST /api/driver/upload-docs
@@ -213,10 +214,11 @@ const createTrip = async (req, res) => {
       pricePerKg,
       // Also fill old field for compatibility.
       pricePerSlot: pricePerKg,
+      status: 'approved',
       notes,
     });
 
-    res.status(201).json({ success: true, message: 'Trip created. Awaiting admin approval.', trip });
+    res.status(201).json({ success: true, message: 'Trip created and published.', trip });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -274,6 +276,12 @@ const updateTripStatus = async (req, res) => {
       }
       trip.status = 'completed';
       await trip.save();
+      await writeAuditLog(req, {
+        action: 'trip.completed',
+        targetType: 'trip',
+        targetId: trip._id,
+        metadata: { previousStatus: 'approved' },
+      });
       return res.json({ success: true, message: 'Trip marked as completed.', trip });
     }
 
@@ -317,6 +325,12 @@ const updateTripStatus = async (req, res) => {
     });
 
     const updated = await Trip.findById(trip._id);
+    await writeAuditLog(req, {
+      action: 'trip.cancelled',
+      targetType: 'trip',
+      targetId: trip._id,
+      metadata: { cancelledBookings: true },
+    });
     res.json({
       success: true,
       message: 'Trip cancelled. All bookings were cancelled automatically.',
@@ -355,11 +369,6 @@ const getTripBookings = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const validStatuses = ['picked', 'in-transit', 'delivered'];
-
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status.' });
-    }
 
     const booking = await Booking.findById(req.params.id).populate('tripId');
     if (!booking) {
@@ -374,6 +383,20 @@ const updateBookingStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Booking is not confirmed yet.' });
     }
 
+    const allowedNextStatus = {
+      booked: 'picked',
+      picked: 'in-transit',
+      'in-transit': 'delivered',
+    };
+    const expected = allowedNextStatus[booking.status];
+    if (status !== expected) {
+      return res.status(400).json({
+        success: false,
+        message: expected ? `Next status must be ${expected}.` : `Cannot update a ${booking.status} booking.`,
+      });
+    }
+
+    const previousStatus = booking.status;
     booking.status = status;
     if (status === 'delivered') {
       booking.paymentStatus = 'collected';
@@ -384,6 +407,12 @@ const updateBookingStatus = async (req, res) => {
       );
     }
     await booking.save();
+    await writeAuditLog(req, {
+      action: `booking.${status}`,
+      targetType: 'booking',
+      targetId: booking._id,
+      metadata: { previousStatus, tripId: booking.tripId._id },
+    });
 
     res.json({ success: true, message: `Booking marked as ${status}`, booking });
   } catch (error) {
@@ -462,6 +491,16 @@ const decideBookingRequest = async (req, res) => {
     const updated = await Booking.findById(booking._id)
       .populate('tripId', 'from to pickupLocation dropLocation date time driverId')
       .populate('customerId', 'name phone');
+
+    await writeAuditLog(req, {
+      action: decision === 'confirmed' ? 'booking.confirmed' : 'booking.rejected',
+      targetType: 'booking',
+      targetId: booking._id,
+      metadata: {
+        tripId: booking.tripId._id,
+        rejectionReason: decision === 'rejected' ? (rejectionReason || 'Rejected by driver') : null,
+      },
+    });
 
     res.json({
       success: true,

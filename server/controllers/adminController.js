@@ -2,6 +2,7 @@ const User = require('../models/User');
 const DriverProfile = require('../models/DriverProfile');
 const Trip = require('../models/Trip');
 const Booking = require('../models/Booking');
+const { writeAuditLog } = require('../utils/audit');
 
 // @desc    Get all drivers with profiles
 // @route   GET /api/admin/drivers
@@ -54,10 +55,6 @@ const verifyDriver = async (req, res) => {
   try {
     const { status, rejectionReason } = req.body;
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status.' });
-    }
-
     const profile = await DriverProfile.findOneAndUpdate(
       { userId: req.params.id },
       { verificationStatus: status, rejectionReason: rejectionReason || null },
@@ -68,6 +65,12 @@ const verifyDriver = async (req, res) => {
 
     // Update user isVerified flag
     await User.findByIdAndUpdate(req.params.id, { isVerified: status === 'approved' });
+    await writeAuditLog(req, {
+      action: `driver.${status}`,
+      targetType: 'driver',
+      targetId: req.params.id,
+      metadata: { rejectionReason: rejectionReason || null },
+    });
 
     res.json({
       success: true,
@@ -104,8 +107,13 @@ const updateTripStatus = async (req, res) => {
   try {
     const { status, rejectionReason } = req.body;
 
-    if (!['approved', 'rejected'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status.' });
+    const currentTrip = await Trip.findById(req.params.id);
+    if (!currentTrip) return res.status(404).json({ success: false, message: 'Trip not found.' });
+    if (['completed', 'cancelled'].includes(currentTrip.status)) {
+      return res.status(400).json({ success: false, message: `Cannot update a ${currentTrip.status} trip.` });
+    }
+    if (currentTrip.status === status) {
+      return res.status(400).json({ success: false, message: `Trip is already ${status}.` });
     }
 
     const trip = await Trip.findByIdAndUpdate(
@@ -114,7 +122,12 @@ const updateTripStatus = async (req, res) => {
       { new: true }
     ).populate('driverId', 'name phone');
 
-    if (!trip) return res.status(404).json({ success: false, message: 'Trip not found.' });
+    await writeAuditLog(req, {
+      action: `trip.${status}`,
+      targetType: 'trip',
+      targetId: req.params.id,
+      metadata: { rejectionReason: rejectionReason || null, previousStatus: currentTrip.status },
+    });
 
     res.json({ success: true, message: `Trip ${status}.`, trip });
   } catch (error) {
@@ -161,6 +174,12 @@ const toggleUserStatus = async (req, res) => {
 
     user.isActive = !user.isActive;
     await user.save();
+    await writeAuditLog(req, {
+      action: user.isActive ? 'user.activated' : 'user.deactivated',
+      targetType: 'user',
+      targetId: user._id,
+      metadata: { role: user.role },
+    });
 
     res.json({ success: true, message: `User ${user.isActive ? 'activated' : 'deactivated'}.`, user });
   } catch (error) {

@@ -1,15 +1,20 @@
 import axios from 'axios'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
+let accessToken = null
+
+export const setAccessToken = (token) => {
+  accessToken = token || null
+}
 
 const api = axios.create({
   baseURL: API_URL,
+  withCredentials: true,
 })
 
 // Attach JWT token on every request
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('pf_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
 
   // Let the browser/axios set multipart boundaries for FormData uploads.
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
@@ -25,10 +30,26 @@ api.interceptors.request.use((config) => {
 // Handle 401 globally
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      localStorage.removeItem('pf_token')
-      localStorage.removeItem('pf_user')
+  async (err) => {
+    const original = err.config || {}
+    const url = original.url || ''
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/register') || url.includes('/auth/refresh')
+
+    if (err.response?.status === 401 && !original._retry && !isAuthEndpoint) {
+      original._retry = true
+      try {
+        const { data } = await api.post('/auth/refresh')
+        setAccessToken(data.accessToken)
+        original.headers = original.headers || {}
+        original.headers.Authorization = `Bearer ${data.accessToken}`
+        return api(original)
+      } catch {
+        setAccessToken(null)
+      }
+    }
+
+    if (err.response?.status === 401 && !isAuthEndpoint) {
+      setAccessToken(null)
       const next = `${window.location.pathname || '/'}${window.location.search || ''}`
       window.location.href = `/login?next=${encodeURIComponent(next)}`
     }
